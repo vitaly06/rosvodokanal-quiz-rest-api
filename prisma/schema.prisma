@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  login     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  number   Int     @unique
+  fullName String?
+}
+
+model Nomination {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  duration  DateTime
+  questions Question[]
+}
+
+model Question {
+  id           Int        @id @default(autoincrement())
+  question     String
+  photoName    String
+  answers      Answer[]
+  Nomination   Nomination @relation(fields: [nominationId], references: [id])
+  nominationId Int
+}
+
+model Answer {
+  id          Int      @id @default(autoincrement())
+  answer      String
+  correctness Boolean
+  Question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId  Int
+}
