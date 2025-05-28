@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, MinLength } from 'class-validator';
 
-export class RegisterAdminRequest {
+export class LoginAdminRequest {
   @ApiProperty({
     description: 'Логин',
     example: 'Vitaly.vd2132',

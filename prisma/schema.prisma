@@ -31,7 +31,7 @@ model Nomination {
 model Question {
   id           Int        @id @default(autoincrement())
   question     String
-  photoName    String
+  photoName    String?
   answers      Answer[]
   Nomination   Nomination @relation(fields: [nominationId], references: [id], onDelete: Cascade)
   nominationId Int
