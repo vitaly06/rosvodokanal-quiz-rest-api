@@ -33,7 +33,7 @@ model Question {
   question     String
   photoName    String
   answers      Answer[]
-  Nomination   Nomination @relation(fields: [nominationId], references: [id])
+  Nomination   Nomination @relation(fields: [nominationId], references: [id], onDelete: Cascade)
   nominationId Int
 }
 
