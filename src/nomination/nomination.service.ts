@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -49,18 +50,33 @@ export class NominationService {
     if (!existNomination) {
       throw new NotFoundException('Номинация не найдена ');
     }
-    await this.prisma.nomination.update({
-      where: { id },
-      data: {
-        name,
-        duration: await this.formatTime(duration),
-        questionsCount,
-      },
+    const checkName = await this.prisma.nomination.findUnique({
+      where: { name },
     });
-    return { succes: true };
+    if ((checkName && checkName.id == id) || !checkName) {
+      await this.prisma.nomination.update({
+        where: { id },
+        data: {
+          name,
+          duration: await this.formatTime(duration),
+          questionsCount,
+        },
+      });
+      return { succes: true };
+    } else {
+      throw new BadRequestException(
+        'Номинация с таким названием уже существует',
+      );
+    }
   }
 
   async delete(id: number) {
+    const checkNomination = await this.prisma.nomination.findUnique({
+      where: { id },
+    });
+    if (!checkNomination) {
+      throw new NotFoundException('Номинация с таким id не найдена');
+    }
     await this.prisma.nomination.delete({
       where: { id },
     });

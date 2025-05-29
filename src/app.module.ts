@@ -5,6 +5,7 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { NominationModule } from './nomination/nomination.module';
+import { BranchModule } from './branch/branch.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { NominationModule } from './nomination/nomination.module';
       isGlobal: true,
     }),
     NominationModule,
+    BranchModule,
   ],
   controllers: [AppController],
   providers: [],
