@@ -22,10 +22,16 @@ model User {
 }
 
 model Nomination {
-  id        Int        @id @default(autoincrement())
-  name      String     @unique
-  duration  DateTime
-  questions Question[]
+  id             Int        @id @default(autoincrement())
+  name           String     @unique
+  duration       DateTime
+  questionsCount Int
+  questions      Question[]
+}
+
+model Branch {
+  id      Int    @id @default(autoincrement())
+  address String @unique
 }
 
 model Question {
