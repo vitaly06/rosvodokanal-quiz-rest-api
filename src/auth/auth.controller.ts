@@ -20,7 +20,6 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { AuthResponse } from './dto/auth.dto';
-import { Authorization } from './decorators/auth.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -87,7 +86,6 @@ export class AuthController {
   }
 
   @Get('me')
-  @Authorization()
   @HttpCode(200)
   async me(@Req() req: Request) {
     return req.user;

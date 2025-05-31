@@ -6,12 +6,14 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from '@prisma/client';
 import { CreateUserRequest } from './dto/create-user.dto';
 import { UpdateUserRequest } from './dto/update-user.dto';
 import { ApiOperation } from '@nestjs/swagger';
+import { AdminGuard } from 'src/common/guards/admin.guard';
 
 @Controller('user')
 export class UserController {
@@ -36,6 +38,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Создание пользователя',
   })
+  @UseGuards(AdminGuard)
   @Post('create')
   async create(@Body() dto: CreateUserRequest): Promise<User> {
     return await this.userService.create(dto);
@@ -44,6 +47,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Обновление пользователя по id',
   })
+  @UseGuards(AdminGuard)
   @Put('update/:id')
   async update(
     @Param('id') id: string,
@@ -55,6 +59,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Удаление пользователя по id',
   })
+  @UseGuards(AdminGuard)
   @Delete('delete/:id')
   async delete(@Param('id') id: string) {
     return await this.userService.delete(+id);
