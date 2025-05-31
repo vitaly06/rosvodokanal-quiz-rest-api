@@ -17,8 +17,10 @@ model Admin {
 
 model User {
   id       Int     @id @default(autoincrement())
-  number   Int     @unique
+  number   String  @unique
   fullName String?
+  branchId Int?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
 }
 
 model Nomination {
@@ -32,6 +34,7 @@ model Nomination {
 model Branch {
   id      Int    @id @default(autoincrement())
   address String @unique
+  User    User[]
 }
 
 model Question {
