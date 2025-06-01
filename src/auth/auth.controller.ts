@@ -6,6 +6,7 @@ import {
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterAdminRequest } from './dto/register.dto';
@@ -20,6 +21,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { AuthResponse } from './dto/auth.dto';
+import { AdminGuard } from 'src/common/guards/admin.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -87,7 +89,8 @@ export class AuthController {
 
   @Get('me')
   @HttpCode(200)
-  async me(@Req() req: Request) {
-    return req.user;
+  @UseGuards(AdminGuard)
+  async me() {
+    return { isAdmin: true };
   }
 }

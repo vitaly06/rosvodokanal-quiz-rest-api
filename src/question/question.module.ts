@@ -4,6 +4,7 @@ import { QuestionController } from './question.controller';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import * as path from 'path';
         },
       }),
     }),
+    JwtModule,
   ],
   controllers: [QuestionController],
   providers: [QuestionService],

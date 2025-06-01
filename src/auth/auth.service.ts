@@ -114,7 +114,7 @@ export class AuthService {
       new Date(Date.now() + 60 * 60 * 24 * 7),
     );
 
-    return { succes: true };
+    return { success: true };
   }
 
   async validate(id: string) {

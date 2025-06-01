@@ -9,6 +9,7 @@ import {
   Res,
   StreamableFile,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { QuestionService } from './question.service';
@@ -26,6 +27,7 @@ import {
   ApiParam,
   ApiProduces,
 } from '@nestjs/swagger';
+import { AdminGuard } from 'src/common/guards/admin.guard';
 
 @Controller('question')
 export class QuestionController {
@@ -39,9 +41,9 @@ export class QuestionController {
     description: 'id номинации',
     type: Number,
   })
-  @Get('all-by-nomination/:nomination-id')
+  @Get('all-by-nomination/:nominationId')
   async findAllByNomination(
-    @Param('nomination-id') nominationId: string,
+    @Param('nominationId') nominationId: string,
   ): Promise<Question[]> {
     return await this.questionService.findAllByNomination(+nominationId);
   }
@@ -62,6 +64,7 @@ export class QuestionController {
   @ApiBody({
     schema: {
       type: 'object',
+      required: ['question', 'nominationId'],
       properties: {
         question: { type: 'string' },
         nominationId: { type: 'number' },
@@ -72,6 +75,7 @@ export class QuestionController {
       },
     },
   })
+  @UseGuards(AdminGuard)
   @Post('create')
   @UseInterceptors(FileInterceptor('photo'))
   async create(
@@ -88,9 +92,10 @@ export class QuestionController {
   @ApiBody({
     schema: {
       type: 'object',
+      required: [],
       properties: {
-        question: { type: 'string', required: ['false'] },
-        nominationId: { type: 'number', required: ['false'] },
+        question: { type: 'string' },
+        nominationId: { type: 'number' },
         photo: {
           type: 'string',
           format: 'binary',
@@ -100,6 +105,7 @@ export class QuestionController {
     },
   })
   @ApiParam({ name: 'id', description: 'id вопроса', type: Number })
+  @UseGuards(AdminGuard)
   @Patch('update/:id')
   @UseInterceptors(FileInterceptor('photo'))
   async update(
@@ -114,6 +120,7 @@ export class QuestionController {
   @ApiOperation({
     summary: 'Удаление вопроса',
   })
+  @UseGuards(AdminGuard)
   @Delete('delete/:id')
   async delete(@Param('id') id: string) {
     return await this.questionService.delete(+id);
