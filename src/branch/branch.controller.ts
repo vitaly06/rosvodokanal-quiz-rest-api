@@ -6,12 +6,14 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { BranchService } from './branch.service';
 import { Branch } from '@prisma/client';
 import { CreateBranchRequest } from './dto/create-branch.dto';
 import { UpdateBranchRequest } from './dto/update-branch.dto';
 import { ApiOperation } from '@nestjs/swagger';
+import { AdminGuard } from 'src/common/guards/admin.guard';
 
 @Controller('branch')
 export class BranchController {
@@ -36,6 +38,7 @@ export class BranchController {
   @ApiOperation({
     summary: 'Создание филиала',
   })
+  @UseGuards(AdminGuard)
   @Post('create')
   async create(@Body() dto: CreateBranchRequest): Promise<Branch> {
     return await this.branchService.create(dto);
@@ -44,6 +47,7 @@ export class BranchController {
   @ApiOperation({
     summary: 'Обновление филиала по id',
   })
+  @UseGuards(AdminGuard)
   @Put('update/:id')
   async update(@Param('id') id: string, @Body() dto: UpdateBranchRequest) {
     return await this.branchService.update(+id, dto);
@@ -52,6 +56,7 @@ export class BranchController {
   @ApiOperation({
     summary: 'Удаление филиала по id',
   })
+  @UseGuards(AdminGuard)
   @Delete('delete/:id')
   async delete(@Param('id') id: string) {
     return await this.branchService.delete(+id);
