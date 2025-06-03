@@ -33,6 +33,7 @@ export class QuestionService {
   }
 
   async create(dto: CreateQuestionRequest, photoName?: string) {
+    dto.nominationId = +dto.nominationId;
     return await this.prisma.question.create({
       data: {
         ...dto,
@@ -42,6 +43,7 @@ export class QuestionService {
   }
 
   async update(id: number, dto: UpdateQuestionRequest, photoName?: string) {
+    dto.nominationId = +dto.nominationId;
     return this.prisma.question.update({
       where: { id },
       data: {

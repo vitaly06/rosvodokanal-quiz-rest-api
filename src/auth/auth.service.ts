@@ -105,13 +105,13 @@ export class AuthService {
       res,
       'access_token',
       access_token,
-      new Date(Date.now() + 60 * 60 * 2),
+      new Date(Date.now() + 60 * 60 * 2 * 1000),
     );
     this.setCookie(
       res,
       'refresh_token',
       refresh_token,
-      new Date(Date.now() + 60 * 60 * 24 * 7),
+      new Date(Date.now() + 60 * 60 * 24 * 7 * 1000),
     );
 
     return { success: true };

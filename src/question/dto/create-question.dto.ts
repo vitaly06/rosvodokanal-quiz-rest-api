@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsInt, IsNotEmpty, IsPositive, IsString } from 'class-validator';
 
 export class CreateQuestionRequest {
@@ -14,7 +15,9 @@ export class CreateQuestionRequest {
     name: 'nominationId',
     description: 'id Номинации',
     example: 1,
+    type: Number,
   })
+  @Transform(({ value }) => parseInt(value, 10))
   @IsInt({ message: 'id номинации должен быть целым числом' })
   @IsPositive({ message: 'id должен быть положительным числом' })
   nominationId: number;

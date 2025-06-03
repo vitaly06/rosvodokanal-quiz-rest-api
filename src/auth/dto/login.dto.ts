@@ -16,6 +16,6 @@ export class LoginAdminRequest {
   })
   @IsString({ message: 'Пароль должен быть строкой' })
   @IsNotEmpty({ message: 'Пароль не может быть пустым' })
-  @MinLength(6, { message: 'Минимальная длина пароль 6 символов' })
+  @MinLength(6, { message: 'Минимальная длина пароля 6 символов' })
   password: string;
 }

@@ -17,10 +17,16 @@ export class NominationService {
     return await this.prisma.nomination.findMany();
   }
 
-  async findById(id: number): Promise<Nomination> {
-    return await this.prisma.nomination.findUnique({
+  async findById(id: number) {
+    const nomination = await this.prisma.nomination.findUnique({
       where: { id },
     });
+
+    nomination['allCount'] = await this.prisma.question.count({
+      where: { nominationId: id },
+    });
+
+    return nomination;
   }
 
   async create(dto: CreateNominationRequest): Promise<Nomination> {
@@ -35,7 +41,7 @@ export class NominationService {
     return await this.prisma.nomination.create({
       data: {
         name,
-        duration: await this.formatTime(duration),
+        duration,
         questionsCount,
       },
     });
@@ -58,7 +64,7 @@ export class NominationService {
         where: { id },
         data: {
           name,
-          duration: await this.formatTime(duration),
+          duration,
           questionsCount,
         },
       });
@@ -81,11 +87,5 @@ export class NominationService {
       where: { id },
     });
     return { success: true };
-  }
-
-  async formatTime(duration: string) {
-    const [hours, minutes, seconds] = duration.split(':').map(Number);
-    const durationMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
-    return new Date(Date.now() + durationMs);
   }
 }

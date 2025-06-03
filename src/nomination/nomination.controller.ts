@@ -31,7 +31,7 @@ export class NominationController {
     summary: 'Получение номинации по id',
   })
   @Get('by-id/:id')
-  async findById(@Param('id') id: string): Promise<Nomination> {
+  async findById(@Param('id') id: string) {
     return await this.nominationService.findById(+id);
   }
 

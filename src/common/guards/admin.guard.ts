@@ -21,7 +21,6 @@ export class AdminGuard implements CanActivate {
     const request = context.switchToHttp().getRequest() as Request;
 
     const token = request.cookies['access_token'];
-    console.log(token);
     if (!token) {
       throw new UnauthorizedException('Вы не авторизованы');
     }

@@ -37,7 +37,7 @@ export class QuestionController {
     summary: 'Получение вопросов по id номинации',
   })
   @ApiParam({
-    name: 'nomination-id',
+    name: 'nominationId',
     description: 'id номинации',
     type: Number,
   })
