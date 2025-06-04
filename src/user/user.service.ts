@@ -48,25 +48,26 @@ export class UserService {
     const { fullName, branchId } = { ...dto };
 
     await this.findById(userId);
-    // const existUser = await this.prisma.user.findUnique({
-    //   where: { id: userId },
-    // });
-    // if (!existUser) {
-    //   throw new NotFoundException('Пользователь с таким id не найден');
-    // }
 
-    const existBranch = await this.prisma.branch.findUnique({
-      where: { id: +branchId },
-    });
-    if (!existBranch) {
-      throw new NotFoundException('Филиала с таким id не существует');
+    const updatedData: any = {};
+
+    if (fullName != undefined) {
+      updatedData.fullName = fullName;
     }
+
+    if (branchId != undefined) {
+      const existBranch = await this.prisma.branch.findUnique({
+        where: { id: +branchId },
+      });
+      if (!existBranch) {
+        throw new NotFoundException('Филиала с таким id не существует');
+      }
+      updatedData.branchId = +branchId;
+    }
+
     return await this.prisma.user.update({
       where: { id: userId },
-      data: {
-        fullName,
-        branchId: +branchId,
-      },
+      data: updatedData,
     });
   }
 

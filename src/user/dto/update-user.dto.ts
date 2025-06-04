@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsPositive, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
 
 export class UpdateUserRequest {
   @ApiProperty({
@@ -8,15 +8,17 @@ export class UpdateUserRequest {
     example: 'Садиков Виталий Дмитриевич',
   })
   @IsString({ message: 'ФИО должно быть строкой' })
-  @IsNotEmpty({ message: 'ФИО не может быть пустым' })
-  fullName: string;
+  @IsOptional()
+  fullName?: string;
 
   @ApiProperty({
     name: 'branchId',
     description: 'id филиала',
     example: 1,
+    type: Number,
   })
   @IsInt({ message: 'id филиала должен быть числом' })
   @IsPositive({ message: 'id филиала должен быть положительным' })
-  branchId: string;
+  @IsOptional()
+  branchId?: string;
 }

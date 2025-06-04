@@ -13,8 +13,14 @@ import { UpdateNominationRequest } from './dto/update-nomination.dto';
 export class NominationService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(): Promise<Nomination[]> {
-    return await this.prisma.nomination.findMany();
+  async findAll() {
+    const nominations = this.prisma.nomination.findMany();
+    for (const nomination of await nominations) {
+      nomination['allCount'] = await this.prisma.question.count({
+        where: { nominationId: nomination.id },
+      });
+    }
+    return nominations;
   }
 
   async findById(id: number) {
