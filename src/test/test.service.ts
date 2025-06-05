@@ -30,16 +30,18 @@ export class TestService {
       user = await this.prisma.user.create({ data: { number } });
     }
 
-    // Получаем номинацию с вопросами (без ответов)
+    // Получаем номинацию с вопросами и вариантами ответов
     const nomination = await this.prisma.nomination.findUnique({
       where: { id: nominationId },
       include: {
         questions: {
-          select: {
-            id: true,
-            question: true,
-            photoName: true,
-            nominationId: true,
+          include: {
+            answers: {
+              select: {
+                id: true,
+                answer: true,
+              },
+            },
           },
         },
       },
@@ -56,6 +58,14 @@ export class TestService {
       answers: [],
     });
 
+    // Формируем вопросы с вариантами ответов
+    const questionsWithOptions = nomination.questions.map((question) => ({
+      id: question.id,
+      text: question.question,
+      photoName: question.photoName,
+      options: question.answers,
+    }));
+
     return {
       user,
       nomination: {
@@ -64,17 +74,8 @@ export class TestService {
         duration: nomination.duration,
         totalQuestions: nomination.questionsCount,
       },
-      questions: nomination.questions, // Все вопросы без ответов
-      questionNumber: 1,
-      totalQuestions: nomination.questionsCount,
+      questions: questionsWithOptions,
     };
-  }
-
-  private async getQuestionOptions(questionId: number) {
-    return this.prisma.answer.findMany({
-      where: { questionId },
-      select: { id: true, answer: true },
-    });
   }
 
   async submitAnswer(userId: number, dto: SubmitAnswerDto) {
@@ -88,17 +89,29 @@ export class TestService {
     // Получаем следующий вопрос
     const nomination = await this.prisma.nomination.findUnique({
       where: { id: testSession.nominationId },
-      include: { questions: true },
+      include: {
+        questions: {
+          include: {
+            answers: {
+              select: {
+                id: true,
+                answer: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     const currentQuestionIndex = nomination.questions.findIndex(
       (q) => q.id === dto.questionId,
     );
 
-    if (
-      currentQuestionIndex === -1 ||
-      currentQuestionIndex === nomination.questions.length - 1
-    ) {
+    if (currentQuestionIndex === -1) {
+      throw new NotFoundException('Вопрос не найден');
+    }
+
+    if (currentQuestionIndex === nomination.questions.length - 1) {
       return { completed: true };
     }
 
@@ -109,7 +122,8 @@ export class TestService {
       nextQuestion: {
         id: nextQuestion.id,
         text: nextQuestion.question,
-        options: await this.getQuestionOptions(nextQuestion.id),
+        photoName: nextQuestion.photoName,
+        options: nextQuestion.answers,
       },
       questionNumber: currentQuestionIndex + 2,
       totalQuestions: nomination.questions.length,
@@ -134,7 +148,22 @@ export class TestService {
     const results = await this.checkAnswers(testSession.answers);
     const finishedAt = new Date();
 
-    // Сохраняем результат
+    // Получаем полные данные ответов для сохранения
+    const answersToSave = await Promise.all(
+      results.answers.map(async (a) => {
+        const answer = await this.prisma.answer.findUnique({
+          where: { id: a.userAnswerId },
+        });
+        return {
+          answer: answer.answer,
+          answerId: a.userAnswerId,
+          questionId: a.questionId,
+          correctness: a.isCorrect,
+        };
+      }),
+    );
+
+    // Сохраняем результат теста
     const testResult = await this.prisma.testResult.create({
       data: {
         userId,
@@ -146,16 +175,18 @@ export class TestService {
         startedAt: new Date(startedAt),
         finishedAt,
         answers: {
-          create: results.answers.map((a) => ({
-            answer: a.userAnswer,
+          create: answersToSave.map((a) => ({
+            answer: a.answer,
+            answerId: a.answerId,
             questionId: a.questionId,
-            correctness: a.isCorrect,
+            correctness: a.correctness,
           })),
         },
       },
       include: {
         nomination: true,
         user: true,
+        answers: true,
       },
     });
 
@@ -171,7 +202,7 @@ export class TestService {
     const questionIds = answers.map((a) => a.questionId);
     const questions = await this.prisma.question.findMany({
       where: { id: { in: questionIds } },
-      include: { answers: { where: { correctness: true } } },
+      include: { answers: true },
     });
 
     let correctAnswers = 0;
@@ -179,17 +210,16 @@ export class TestService {
 
     for (const question of questions) {
       const userAnswer = answers.find((a) => a.questionId === question.id);
-      const isCorrect = question.answers.some(
-        (a) => a.answer === userAnswer.answer,
-      );
+      const correctAnswer = question.answers.find((a) => a.correctness);
+      const isCorrect = correctAnswer?.id === Number(userAnswer.answerId);
 
       if (isCorrect) correctAnswers++;
 
       detailedResults.push({
         questionId: question.id,
         questionText: question.question,
-        userAnswer: userAnswer.answer,
-        correctAnswer: question.answers[0]?.answer || '',
+        userAnswerId: Number(userAnswer.answerId),
+        correctAnswerId: correctAnswer?.id || null,
         isCorrect,
       });
     }

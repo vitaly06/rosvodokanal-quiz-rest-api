@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsPositive, IsString } from 'class-validator';
+import { IsInt, IsPositive } from 'class-validator';
 
 export class SubmitAnswerDto {
   @ApiProperty()
@@ -8,6 +8,7 @@ export class SubmitAnswerDto {
   questionId: number;
 
   @ApiProperty()
-  @IsString()
-  answer: string;
+  @IsInt()
+  @IsPositive()
+  answerId: string;
 }
