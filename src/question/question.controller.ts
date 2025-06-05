@@ -78,7 +78,7 @@ export class QuestionController {
   @UseInterceptors(FileInterceptor('photo'))
   async create(
     @Body() dto: CreateQuestionRequest,
-    @UploadedFile() photo: Express.Multer.File,
+    @UploadedFile() photo?: Express.Multer.File,
   ) {
     return await this.questionService.create(dto, photo?.filename);
   }

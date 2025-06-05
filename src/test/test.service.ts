@@ -30,10 +30,19 @@ export class TestService {
       user = await this.prisma.user.create({ data: { number } });
     }
 
-    // Получаем номинацию
+    // Получаем номинацию с вопросами (без ответов)
     const nomination = await this.prisma.nomination.findUnique({
       where: { id: nominationId },
-      include: { questions: true },
+      include: {
+        questions: {
+          select: {
+            id: true,
+            question: true,
+            photoName: true,
+            nominationId: true,
+          },
+        },
+      },
     });
 
     if (!nomination) {
@@ -47,9 +56,6 @@ export class TestService {
       answers: [],
     });
 
-    // Получаем первый вопрос
-    const firstQuestion = nomination.questions[0];
-
     return {
       user,
       nomination: {
@@ -58,11 +64,7 @@ export class TestService {
         duration: nomination.duration,
         totalQuestions: nomination.questionsCount,
       },
-      currentQuestion: {
-        id: firstQuestion.id,
-        text: firstQuestion.question,
-        options: await this.getQuestionOptions(firstQuestion.id),
-      },
+      questions: nomination.questions, // Все вопросы без ответов
       questionNumber: 1,
       totalQuestions: nomination.questionsCount,
     };
