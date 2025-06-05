@@ -15,18 +15,25 @@ export class QuestionService {
     if (!existNomination) {
       throw new NotFoundException('Номинации с таким id не существует');
     }
-    return await this.prisma.question.findMany({
-      where: {
-        nominationId,
-      },
-      select: {
-        id: true,
-        question: true,
-        answers: {
-          where: { correctness: true },
+    return await this.prisma.question
+      .findMany({
+        where: {
+          nominationId,
         },
-      },
-    });
+        select: {
+          id: true,
+          question: true,
+          answers: {
+            where: { correctness: true },
+          },
+        },
+      })
+      .then((questions) =>
+        questions.map((question) => ({
+          ...question,
+          answers: question.answers[0] || {},
+        })),
+      );
   }
 
   async findById(id: number): Promise<Question> {
