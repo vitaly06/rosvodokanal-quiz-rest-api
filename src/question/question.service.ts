@@ -8,7 +8,7 @@ import { UpdateQuestionRequest } from './dto/update-question.dto';
 export class QuestionService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAllByNomination(nominationId: number): Promise<Question[]> {
+  async findAllByNomination(nominationId: number) {
     const existNomination = await this.prisma.nomination.findUnique({
       where: { id: nominationId },
     });
@@ -18,6 +18,13 @@ export class QuestionService {
     return await this.prisma.question.findMany({
       where: {
         nominationId,
+      },
+      select: {
+        id: true,
+        question: true,
+        answers: {
+          where: { correctness: true },
+        },
       },
     });
   }

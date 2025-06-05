@@ -42,9 +42,7 @@ export class QuestionController {
     type: Number,
   })
   @Get('all-by-nomination/:nominationId')
-  async findAllByNomination(
-    @Param('nominationId') nominationId: string,
-  ): Promise<Question[]> {
+  async findAllByNomination(@Param('nominationId') nominationId: string) {
     return await this.questionService.findAllByNomination(+nominationId);
   }
 

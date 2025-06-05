@@ -10,6 +10,7 @@ import { QuestionModule } from './question/question.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { AnswerModule } from './answer/answer.module';
+import { TestModule } from './test/test.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AnswerModule } from './answer/answer.module';
       serveRoot: '/uploads',
     }),
     AnswerModule,
+    TestModule,
   ],
   controllers: [AppController],
   providers: [],

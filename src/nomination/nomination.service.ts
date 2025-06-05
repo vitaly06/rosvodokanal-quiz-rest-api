@@ -15,6 +15,7 @@ export class NominationService {
 
   async findAll() {
     const nominations = this.prisma.nomination.findMany();
+    // добавляем общее кол-во вопросов в базе
     for (const nomination of await nominations) {
       nomination['allCount'] = await this.prisma.question.count({
         where: { nominationId: nomination.id },

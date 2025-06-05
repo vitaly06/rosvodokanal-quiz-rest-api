@@ -16,19 +16,21 @@ model Admin {
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
-  number   String  @unique
-  fullName String?
-  branchId Int?
-  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  id         Int          @id @default(autoincrement())
+  number     String       @unique
+  fullName   String?
+  branchId   Int?
+  branch     Branch?      @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  TestResult TestResult[]
 }
 
 model Nomination {
-  id             Int        @id @default(autoincrement())
-  name           String     @unique
+  id             Int          @id @default(autoincrement())
+  name           String       @unique
   duration       String
   questionsCount Int
   questions      Question[]
+  TestResult     TestResult[]
 }
 
 model Branch {
@@ -47,9 +49,26 @@ model Question {
 }
 
 model Answer {
-  id          Int      @id @default(autoincrement())
-  answer      String
-  correctness Boolean
-  Question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  questionId  Int
+  id           Int         @id @default(autoincrement())
+  answer       String
+  correctness  Boolean
+  Question     Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId   Int
+  TestResult   TestResult? @relation(fields: [testResultId], references: [id])
+  testResultId Int?
+}
+
+model TestResult {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nominationId Int
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
+  score        Int
+  total        Int
+  percentage   Float
+  duration     String
+  startedAt    DateTime
+  finishedAt   DateTime
+  answers      Answer[]
 }
