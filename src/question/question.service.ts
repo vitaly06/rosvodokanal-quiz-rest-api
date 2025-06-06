@@ -23,6 +23,7 @@ export class QuestionService {
         select: {
           id: true,
           question: true,
+          photoName: true,
           answers: {
             where: { correctness: true },
           },

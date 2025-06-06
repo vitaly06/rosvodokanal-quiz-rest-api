@@ -25,9 +25,9 @@ export class TestService {
     const { number, nominationId } = dto;
 
     // Проверяем/создаем пользователя
-    let user = await this.prisma.user.findUnique({ where: { number } });
+    const user = await this.prisma.user.findUnique({ where: { number } });
     if (!user) {
-      user = await this.prisma.user.create({ data: { number } });
+      throw new NotFoundException('Пользователя с таким номером не существует');
     }
 
     // Получаем номинацию с вопросами и вариантами ответов
