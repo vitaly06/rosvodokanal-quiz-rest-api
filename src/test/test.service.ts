@@ -6,7 +6,6 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SubmitAnswerDto } from './dto/submit-answer.dto';
 import { StartTestDto } from './dto/start-test.dto';
-import { FinishTestDto } from './dto/finish-test.dto';
 
 @Injectable()
 export class TestService {
@@ -25,9 +24,13 @@ export class TestService {
     const { number, nominationId } = dto;
 
     // Проверяем/создаем пользователя
-    const user = await this.prisma.user.findUnique({ where: { number } });
+    let user = await this.prisma.user.findUnique({ where: { number } });
     if (!user) {
-      throw new NotFoundException('Пользователя с таким номером не существует');
+      user = await this.prisma.user.create({
+        data: {
+          number,
+        },
+      });
     }
 
     // Получаем номинацию с вопросами и вариантами ответов
@@ -130,40 +133,20 @@ export class TestService {
     };
   }
 
-  async finishTest(userId: number, dto: FinishTestDto) {
+  async finishTest(
+    userId: number,
+    answers: Array<{ questionId: number; optionId: number }>,
+  ) {
     if (!this.activeTests.has(userId)) {
       throw new BadRequestException('Тест не начат');
     }
 
     const testSession = this.activeTests.get(userId);
-    const { fullName, branchId, startedAt } = dto;
-
-    // Обновляем данные пользователя
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { fullName, branchId },
-    });
-
-    // Проверяем ответы
-    const results = await this.checkAnswers(testSession.answers);
+    const results = await this.checkAnswers(answers);
     const finishedAt = new Date();
+    const startedAt = testSession.startedAt;
 
-    // Получаем полные данные ответов для сохранения
-    const answersToSave = await Promise.all(
-      results.answers.map(async (a) => {
-        const answer = await this.prisma.answer.findUnique({
-          where: { id: a.userAnswerId },
-        });
-        return {
-          answer: answer.answer,
-          answerId: a.userAnswerId,
-          questionId: a.questionId,
-          correctness: a.isCorrect,
-        };
-      }),
-    );
-
-    // Сохраняем результат теста
+    // Сохраняем результат теста с привязкой к существующим ответам
     const testResult = await this.prisma.testResult.create({
       data: {
         userId,
@@ -171,16 +154,11 @@ export class TestService {
         score: results.correctAnswers,
         total: results.totalQuestions,
         percentage: results.percentage,
-        duration: this.formatDuration(startedAt, finishedAt),
-        startedAt: new Date(startedAt),
+        duration: this.formatDuration(String(startedAt), finishedAt),
+        startedAt,
         finishedAt,
         answers: {
-          create: answersToSave.map((a) => ({
-            answer: a.answer,
-            answerId: a.answerId,
-            questionId: a.questionId,
-            correctness: a.correctness,
-          })),
+          connect: answers.map((a) => ({ id: a.optionId })),
         },
       },
       include: {
@@ -198,7 +176,9 @@ export class TestService {
     };
   }
 
-  private async checkAnswers(answers: SubmitAnswerDto[]) {
+  private async checkAnswers(
+    answers: Array<{ questionId: number; optionId: number }>,
+  ) {
     const questionIds = answers.map((a) => a.questionId);
     const questions = await this.prisma.question.findMany({
       where: { id: { in: questionIds } },
@@ -211,16 +191,16 @@ export class TestService {
     for (const question of questions) {
       const userAnswer = answers.find((a) => a.questionId === question.id);
       const correctAnswer = question.answers.find((a) => a.correctness);
-      const isCorrect = correctAnswer?.id === Number(userAnswer.answerId);
+      const isCorrect = correctAnswer?.id === userAnswer?.optionId;
 
       if (isCorrect) correctAnswers++;
 
       detailedResults.push({
         questionId: question.id,
         questionText: question.question,
-        userAnswerId: Number(userAnswer.answerId),
+        userAnswerId: userAnswer?.optionId || null,
         correctAnswerId: correctAnswer?.id || null,
-        isCorrect,
+        isCorrect: !!isCorrect,
       });
     }
 

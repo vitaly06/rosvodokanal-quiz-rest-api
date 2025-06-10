@@ -31,6 +31,7 @@ model Nomination {
   questionsCount Int
   questions      Question[]
   TestResult     TestResult[]
+  Category       Category[]
 }
 
 model Branch {
@@ -46,6 +47,16 @@ model Question {
   answers      Answer[]
   Nomination   Nomination @relation(fields: [nominationId], references: [id], onDelete: Cascade)
   nominationId Int
+  Category     Category?  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId   Int?
+}
+
+model Category {
+  id           Int        @id @default(autoincrement())
+  name         String
+  Nomination   Nomination @relation(fields: [nominationId], references: [id], onDelete: Cascade)
+  nominationId Int
+  Question     Question[]
 }
 
 model Answer {

@@ -2,10 +2,8 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { TestService } from './test.service';
 import { StartTestDto } from './dto/start-test.dto';
 import { SubmitAnswerDto } from './dto/submit-answer.dto';
-import { FinishTestDto } from './dto/finish-test.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 
-// test.controller.ts
 @Controller('tests')
 export class TestController {
   constructor(
@@ -29,15 +27,16 @@ export class TestController {
   @Post(':userId/finish')
   async finishTest(
     @Param('userId') userId: number,
-    @Body() dto: FinishTestDto,
+    @Body() dto: Array<{ questionId: number; optionId: number }>,
+    // @Body() dto: FinishTestDto,
   ) {
     return this.testService.finishTest(+userId, dto);
   }
 
   @Get(':userId/results')
-  async getResults(@Param('userId') userId: number) {
+  async getResults(@Param('userId') userId: string) {
     return this.prisma.testResult.findMany({
-      where: { userId },
+      where: { userId: +userId },
       include: { nomination: true },
     });
   }
