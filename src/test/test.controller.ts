@@ -35,9 +35,20 @@ export class TestController {
 
   @Get(':userId/results')
   async getResults(@Param('userId') userId: string) {
-    return this.prisma.testResult.findMany({
-      where: { userId: +userId },
-      include: { nomination: true },
-    });
+    return await this.testService.getResult(+userId);
+  }
+
+  @Get('all-results')
+  async getAllResults() {
+    return await this.testService.getAllResult();
+  }
+
+  // таблица с ответами пользователя и верными ответами
+  @Get('result-table/:userId/:nominationId')
+  async getResultTable(
+    @Param('userId') userId: string,
+    @Param('nominationId') nominationId: string,
+  ) {
+    return await this.testService.getResultTable(+userId, +nominationId);
   }
 }

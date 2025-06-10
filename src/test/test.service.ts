@@ -62,13 +62,14 @@ export class TestService {
     });
 
     // Формируем вопросы с вариантами ответов
-    const questionsWithOptions = nomination.questions.map((question) => ({
-      id: question.id,
-      text: question.question,
-      photoName: question.photoName,
-      options: question.answers,
-    }));
-
+    const questionsWithOptions = nomination.questions
+      .map((question) => ({
+        id: question.id,
+        text: question.question,
+        photoName: question.photoName,
+        options: question.answers.sort((a, b) => a.id - b.id), // Сортировка вариантов ответов
+      }))
+      .sort((a, b) => a.id - b.id); // Сортировка вопросов
     return {
       user,
       nomination: {
@@ -210,6 +211,81 @@ export class TestService {
       percentage: Math.round((correctAnswers / questions.length) * 100),
       answers: detailedResults,
     };
+  }
+
+  async getResult(userId: number) {
+    return this.prisma.testResult.findMany({
+      where: { userId },
+      include: { nomination: true },
+    });
+  }
+
+  async getAllResult() {
+    return this.prisma.testResult.findMany();
+  }
+
+  async getResultTable(userId: number, nominationId: number) {
+    // 1. Получаем ответы пользователя из TestResult (с привязкой к вопросам)
+    const userTestResults = await this.prisma.testResult.findMany({
+      where: { userId, nominationId },
+      select: {
+        answers: {
+          orderBy: { questionId: 'asc' }, // Сортируем по id вопроса
+          select: {
+            id: true,
+            questionId: true, // Чтобы знать, к какому вопросу относится ответ
+          },
+        },
+      },
+    });
+
+    if (userTestResults.length === 0 || !userTestResults[0].answers.length) {
+      throw new NotFoundException('Ответы пользователя не найдены');
+    }
+
+    // 2. Получаем все вопросы номинации с вариантами ответов (отсортированными по questionId и id)
+    const questionsWithAnswers = await this.prisma.question.findMany({
+      where: { nominationId },
+      orderBy: { id: 'asc' }, // Сортируем вопросы по id
+      select: {
+        id: true, // id вопроса
+        answers: {
+          orderBy: { id: 'asc' }, // Сортируем варианты ответов по id
+          select: {
+            id: true,
+            correctness: true,
+          },
+        },
+      },
+    });
+
+    if (questionsWithAnswers.length === 0) {
+      throw new NotFoundException('Вопросы номинации не найдены');
+    }
+
+    // 3. Сопоставляем ответы пользователя с правильными по ПОЗИЦИИ в массиве вариантов
+    const result = questionsWithAnswers.map((question) => {
+      // Ответ пользователя на текущий вопрос
+      const userAnswer = userTestResults[0].answers.find(
+        (answer) => answer.questionId === question.id,
+      );
+
+      // Находим позицию ответа пользователя в массиве вариантов (индекс + 1)
+      const userAnswerPosition = userAnswer
+        ? question.answers.findIndex((a) => a.id === userAnswer.id) + 1
+        : null;
+
+      // Находим позицию правильного ответа (correctness: true)
+      const correctAnswerPosition =
+        question.answers.findIndex((a) => a.correctness) + 1 || null;
+
+      return {
+        userAnswer: userAnswerPosition,
+        correctAnswer: correctAnswerPosition,
+      };
+    });
+
+    return result;
   }
 
   private formatDuration(startedAt: string, finishedAt: Date): string {
