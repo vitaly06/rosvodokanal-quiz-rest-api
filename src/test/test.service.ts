@@ -54,10 +54,20 @@ export class TestService {
       throw new NotFoundException('Номинация не найдена');
     }
 
+    // Рассчитываем время начала и окончания теста
+    const startedAt = new Date();
+
+    // Парсим duration в формате hh:mm:ss
+    const [hours, minutes, seconds] = nomination.duration
+      .split(':')
+      .map(Number);
+    const durationMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
+    const finishedAt = new Date(startedAt.getTime() + durationMs);
+
     // Запоминаем начало теста
     this.activeTests.set(user.id, {
       nominationId,
-      startedAt: new Date(),
+      startedAt,
       answers: [],
     });
 
@@ -67,9 +77,10 @@ export class TestService {
         id: question.id,
         text: question.question,
         photoName: question.photoName,
-        options: question.answers.sort((a, b) => a.id - b.id), // Сортировка вариантов ответов
+        options: question.answers.sort((a, b) => a.id - b.id),
       }))
-      .sort((a, b) => a.id - b.id); // Сортировка вопросов
+      .sort((a, b) => a.id - b.id);
+
     return {
       user,
       nomination: {
@@ -79,58 +90,10 @@ export class TestService {
         totalQuestions: nomination.questionsCount,
       },
       questions: questionsWithOptions,
-    };
-  }
-
-  async submitAnswer(userId: number, dto: SubmitAnswerDto) {
-    if (!this.activeTests.has(userId)) {
-      throw new BadRequestException('Тест не начат');
-    }
-
-    const testSession = this.activeTests.get(userId);
-    testSession.answers.push(dto);
-
-    // Получаем следующий вопрос
-    const nomination = await this.prisma.nomination.findUnique({
-      where: { id: testSession.nominationId },
-      include: {
-        questions: {
-          include: {
-            answers: {
-              select: {
-                id: true,
-                answer: true,
-              },
-            },
-          },
-        },
+      time: {
+        startedAt: startedAt.toISOString(),
+        finishedAt: finishedAt.toISOString(), // Теперь используем рассчитанное значение
       },
-    });
-
-    const currentQuestionIndex = nomination.questions.findIndex(
-      (q) => q.id === dto.questionId,
-    );
-
-    if (currentQuestionIndex === -1) {
-      throw new NotFoundException('Вопрос не найден');
-    }
-
-    if (currentQuestionIndex === nomination.questions.length - 1) {
-      return { completed: true };
-    }
-
-    const nextQuestion = nomination.questions[currentQuestionIndex + 1];
-
-    return {
-      completed: false,
-      nextQuestion: {
-        id: nextQuestion.id,
-        text: nextQuestion.question,
-        photoName: nextQuestion.photoName,
-        options: nextQuestion.answers,
-      },
-      questionNumber: currentQuestionIndex + 2,
-      totalQuestions: nomination.questions.length,
     };
   }
 
@@ -147,13 +110,17 @@ export class TestService {
     const finishedAt = new Date();
     const startedAt = testSession.startedAt;
 
+    const nomination = await this.prisma.nomination.findUnique({
+      where: { id: testSession.nominationId },
+    });
+
     // Сохраняем результат теста с привязкой к существующим ответам
     const testResult = await this.prisma.testResult.create({
       data: {
         userId,
         nominationId: testSession.nominationId,
         score: results.correctAnswers,
-        total: results.totalQuestions,
+        total: nomination.questionsCount,
         percentage: results.percentage,
         duration: this.formatDuration(String(startedAt), finishedAt),
         startedAt,

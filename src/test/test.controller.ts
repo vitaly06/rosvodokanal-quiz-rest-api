@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { TestService } from './test.service';
 import { StartTestDto } from './dto/start-test.dto';
-import { SubmitAnswerDto } from './dto/submit-answer.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Controller('tests')
@@ -16,19 +15,10 @@ export class TestController {
     return this.testService.startTest(dto);
   }
 
-  @Post(':userId/answer')
-  async submitAnswer(
-    @Param('userId') userId: number,
-    @Body() dto: SubmitAnswerDto,
-  ) {
-    return this.testService.submitAnswer(+userId, dto);
-  }
-
   @Post(':userId/finish')
   async finishTest(
     @Param('userId') userId: number,
     @Body() dto: Array<{ questionId: number; optionId: number }>,
-    // @Body() dto: FinishTestDto,
   ) {
     return this.testService.finishTest(+userId, dto);
   }
