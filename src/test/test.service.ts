@@ -200,7 +200,13 @@ export class TestService {
           orderBy: { questionId: 'asc' }, // Сортируем по id вопроса
           select: {
             id: true,
-            questionId: true, // Чтобы знать, к какому вопросу относится ответ
+            answer: true,
+            questionId: true,
+            Question: {
+              select: {
+                question: true,
+              },
+            }, // Чтобы знать, к какому вопросу относится ответ
           },
         },
       },
@@ -221,6 +227,7 @@ export class TestService {
           select: {
             id: true,
             correctness: true,
+            answer: true,
           },
         },
       },
@@ -230,28 +237,17 @@ export class TestService {
       throw new NotFoundException('Вопросы номинации не найдены');
     }
 
-    // 3. Сопоставляем ответы пользователя с правильными по ПОЗИЦИИ в массиве вариантов
-    const result = questionsWithAnswers.map((question) => {
-      // Ответ пользователя на текущий вопрос
-      const userAnswer = userTestResults[0].answers.find(
-        (answer) => answer.questionId === question.id,
-      );
-
-      // Находим позицию ответа пользователя в массиве вариантов (индекс + 1)
-      const userAnswerPosition = userAnswer
-        ? question.answers.findIndex((a) => a.id === userAnswer.id) + 1
-        : null;
-
-      // Находим позицию правильного ответа (correctness: true)
-      const correctAnswerPosition =
-        question.answers.findIndex((a) => a.correctness) + 1 || null;
-
-      return {
-        userAnswer: userAnswerPosition,
-        correctAnswer: correctAnswerPosition,
-      };
-    });
-
+    const result: any = [];
+    let forAnswer = {};
+    for (let i = 0; i < userTestResults[0].answers.length; i++) {
+      forAnswer['question'] = userTestResults[0].answers[i].Question.question;
+      forAnswer['userAnswer'] = userTestResults[0].answers[i].answer;
+      forAnswer['correctAnswer'] = questionsWithAnswers[i].answers.find(
+        (answer) => answer.correctness == true,
+      ).answer;
+      result.push(forAnswer);
+      forAnswer = {};
+    }
     return result;
   }
 
