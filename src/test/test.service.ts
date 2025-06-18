@@ -104,9 +104,17 @@ export class TestService {
     if (!this.activeTests.has(userId)) {
       throw new BadRequestException('Тест не начат');
     }
-
+    let results;
     const testSession = this.activeTests.get(userId);
-    const results = await this.checkAnswers(answers);
+    if (answers.length) {
+      results = await this.checkAnswers(answers);
+    } else {
+      results = {
+        correctAnswers: 0,
+        percentage: 0,
+      };
+    }
+
     const finishedAt = new Date();
     const startedAt = testSession.startedAt;
 
@@ -152,7 +160,12 @@ export class TestService {
       where: { id: { in: questionIds } },
       include: { answers: true },
     });
-
+    const questionCount = await this.prisma.nomination.findUnique({
+      where: { id: questions[0].nominationId },
+      select: {
+        questionsCount: true,
+      },
+    });
     let correctAnswers = 0;
     const detailedResults = [];
 
@@ -175,7 +188,9 @@ export class TestService {
     return {
       correctAnswers,
       totalQuestions: questions.length,
-      percentage: Math.round((correctAnswers / questions.length) * 100),
+      percentage: Math.round(
+        (correctAnswers / questionCount.questionsCount) * 100,
+      ),
       answers: detailedResults,
     };
   }
@@ -192,12 +207,14 @@ export class TestService {
   }
 
   async getResultTable(userId: number, nominationId: number) {
-    // 1. Получаем ответы пользователя из TestResult (с привязкой к вопросам)
-    const userTestResults = await this.prisma.testResult.findMany({
+    // 1. Получаем последний результат теста пользователя для данной номинации
+    const latestResult = await this.prisma.testResult.findFirst({
       where: { userId, nominationId },
+      orderBy: { finishedAt: 'desc' },
       select: {
+        id: true,
         answers: {
-          orderBy: { questionId: 'asc' }, // Сортируем по id вопроса
+          orderBy: { questionId: 'asc' }, // Сортируем ответы по questionId
           select: {
             id: true,
             answer: true,
@@ -206,48 +223,44 @@ export class TestService {
               select: {
                 question: true,
               },
-            }, // Чтобы знать, к какому вопросу относится ответ
+            },
           },
         },
       },
     });
 
-    if (userTestResults.length === 0 || !userTestResults[0].answers.length) {
-      throw new NotFoundException('Ответы пользователя не найдены');
+    if (!latestResult || !latestResult.answers.length) {
+      throw new NotFoundException('Результаты теста не найдены');
     }
 
-    // 2. Получаем все вопросы номинации с вариантами ответов (отсортированными по questionId и id)
-    const questionsWithAnswers = await this.prisma.question.findMany({
-      where: { nominationId },
-      orderBy: { id: 'asc' }, // Сортируем вопросы по id
+    // 2. Получаем правильные ответы для всех вопросов номинации
+    const correctAnswers = await this.prisma.answer.findMany({
+      where: {
+        Question: { nominationId },
+        correctness: true,
+      },
       select: {
-        id: true, // id вопроса
-        answers: {
-          orderBy: { id: 'asc' }, // Сортируем варианты ответов по id
-          select: {
-            id: true,
-            correctness: true,
-            answer: true,
-          },
-        },
+        id: true,
+        answer: true,
+        questionId: true,
       },
+      orderBy: { questionId: 'asc' }, // Сортируем правильные ответы по questionId
     });
 
-    if (questionsWithAnswers.length === 0) {
-      throw new NotFoundException('Вопросы номинации не найдены');
-    }
+    // 3. Формируем результат
+    const result = latestResult.answers.map((userAnswer) => {
+      const correctAnswer = correctAnswers.find(
+        (a) => a.questionId === userAnswer.questionId,
+      );
 
-    const result: any = [];
-    let forAnswer = {};
-    for (let i = 0; i < userTestResults[0].answers.length; i++) {
-      forAnswer['question'] = userTestResults[0].answers[i].Question.question;
-      forAnswer['userAnswer'] = userTestResults[0].answers[i].answer;
-      forAnswer['correctAnswer'] = questionsWithAnswers[i].answers.find(
-        (answer) => answer.correctness == true,
-      ).answer;
-      result.push(forAnswer);
-      forAnswer = {};
-    }
+      return {
+        questionId: userAnswer.questionId, // Добавляем ID вопроса для ясности
+        question: userAnswer.Question.question,
+        userAnswer: userAnswer.answer,
+        correctAnswer: correctAnswer?.answer || 'Правильный ответ не найден',
+      };
+    });
+
     return result;
   }
 
