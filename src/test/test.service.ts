@@ -214,11 +214,12 @@ export class TestService {
       select: {
         id: true,
         answers: {
-          orderBy: { questionId: 'asc' }, // Сортируем ответы по questionId
+          orderBy: { questionId: 'asc' },
           select: {
             id: true,
             answer: true,
             questionId: true,
+            testResultId: true, // Добавляем для проверки связи
             Question: {
               select: {
                 question: true,
@@ -229,35 +230,46 @@ export class TestService {
       },
     });
 
-    if (!latestResult || !latestResult.answers.length) {
+    if (!latestResult) {
       throw new NotFoundException('Результаты теста не найдены');
     }
 
-    // 2. Получаем правильные ответы для всех вопросов номинации
-    const correctAnswers = await this.prisma.answer.findMany({
-      where: {
-        Question: { nominationId },
-        correctness: true,
-      },
+    // 2. Получаем ВСЕ вопросы номинации и их правильные ответы
+    const questionsWithCorrectAnswers = await this.prisma.question.findMany({
+      where: { nominationId },
+      orderBy: { id: 'asc' },
       select: {
         id: true,
-        answer: true,
-        questionId: true,
+        question: true,
+        answers: {
+          where: { correctness: true },
+          select: {
+            answer: true,
+          },
+        },
       },
-      orderBy: { questionId: 'asc' }, // Сортируем правильные ответы по questionId
     });
 
     // 3. Формируем результат
-    const result = latestResult.answers.map((userAnswer) => {
-      const correctAnswer = correctAnswers.find(
-        (a) => a.questionId === userAnswer.questionId,
+    const result = questionsWithCorrectAnswers.map((question) => {
+      // Находим ответ пользователя на этот вопрос (если есть)
+      const userAnswer = latestResult.answers.find(
+        (a) =>
+          a.questionId === question.id && a.testResultId === latestResult.id,
       );
 
+      // Получаем правильный ответ (берем первый, если их несколько)
+      const correctAnswer =
+        question.answers[0]?.answer || 'Правильный ответ не найден';
+
       return {
-        questionId: userAnswer.questionId, // Добавляем ID вопроса для ясности
-        question: userAnswer.Question.question,
-        userAnswer: userAnswer.answer,
-        correctAnswer: correctAnswer?.answer || 'Правильный ответ не найден',
+        questionId: question.id,
+        question: question.question,
+        userAnswer: userAnswer?.answer || 'Не выбран',
+        correctAnswer: correctAnswer,
+        isCorrect: userAnswer
+          ? question.answers.some((a) => a.answer === userAnswer.answer)
+          : false,
       };
     });
 
