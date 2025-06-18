@@ -33,31 +33,53 @@ export class TestService {
       });
     }
 
-    // Получаем номинацию с вопросами и вариантами ответов
+    // Получаем номинацию
     const nomination = await this.prisma.nomination.findUnique({
       where: { id: nominationId },
-      include: {
-        questions: {
-          include: {
-            answers: {
-              select: {
-                id: true,
-                answer: true,
-              },
-            },
-          },
-        },
-      },
     });
 
     if (!nomination) {
       throw new NotFoundException('Номинация не найдена');
     }
 
+    const allQuestions = await this.prisma.question.findMany({
+      where: { nominationId },
+      select: { id: true },
+    });
+
+    if (allQuestions.length === 0) {
+      throw new NotFoundException('Для этой номинации нет вопросов');
+    }
+
+    const questionCount = Math.min(
+      nomination.questionsCount,
+      allQuestions.length,
+    );
+
+    // Перемешиваем вопросы и выбираем нужное количество
+    const shuffledQuestions = [...allQuestions]
+      .sort(() => 0.5 - Math.random())
+      .slice(0, questionCount);
+
+    // Получаем полные данные для выбранных вопросов с ответами
+    const selectedQuestions = await this.prisma.question.findMany({
+      where: {
+        id: { in: shuffledQuestions.map((q) => q.id) },
+      },
+      include: {
+        answers: {
+          select: {
+            id: true,
+            answer: true,
+          },
+          orderBy: { id: 'asc' },
+        },
+      },
+      orderBy: { id: 'asc' },
+    });
+
     // Рассчитываем время начала и окончания теста
     const startedAt = new Date();
-
-    // Парсим duration в формате hh:mm:ss
     const [hours, minutes, seconds] = nomination.duration
       .split(':')
       .map(Number);
@@ -72,14 +94,12 @@ export class TestService {
     });
 
     // Формируем вопросы с вариантами ответов
-    const questionsWithOptions = nomination.questions
-      .map((question) => ({
-        id: question.id,
-        text: question.question,
-        photoName: question.photoName,
-        options: question.answers.sort((a, b) => a.id - b.id),
-      }))
-      .sort((a, b) => a.id - b.id);
+    const questionsWithOptions = selectedQuestions.map((question) => ({
+      id: question.id,
+      text: question.question,
+      photoName: question.photoName,
+      options: question.answers,
+    }));
 
     return {
       user,
@@ -87,12 +107,12 @@ export class TestService {
         id: nomination.id,
         name: nomination.name,
         duration: nomination.duration,
-        totalQuestions: nomination.questionsCount,
+        totalQuestions: questionCount,
       },
       questions: questionsWithOptions,
       time: {
         startedAt: startedAt.toISOString(),
-        finishedAt: finishedAt.toISOString(), // Теперь используем рассчитанное значение
+        finishedAt: finishedAt.toISOString(),
       },
     };
   }
