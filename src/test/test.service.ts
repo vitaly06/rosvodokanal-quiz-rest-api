@@ -231,18 +231,21 @@ export class TestService {
     const latestResult = await this.prisma.testResult.findFirst({
       where: { userId, nominationId },
       orderBy: { finishedAt: 'desc' },
-      select: {
-        id: true,
+      include: {
         answers: {
-          orderBy: { questionId: 'asc' },
           select: {
             id: true,
             answer: true,
             questionId: true,
-            testResultId: true, // Добавляем для проверки связи
             Question: {
               select: {
                 question: true,
+                answers: {
+                  where: { correctness: true },
+                  select: {
+                    answer: true,
+                  },
+                },
               },
             },
           },
@@ -254,42 +257,19 @@ export class TestService {
       throw new NotFoundException('Результаты теста не найдены');
     }
 
-    // 2. Получаем ВСЕ вопросы номинации и их правильные ответы
-    const questionsWithCorrectAnswers = await this.prisma.question.findMany({
-      where: { nominationId },
-      orderBy: { id: 'asc' },
-      select: {
-        id: true,
-        question: true,
-        answers: {
-          where: { correctness: true },
-          select: {
-            answer: true,
-          },
-        },
-      },
-    });
-
-    // 3. Формируем результат
-    const result = questionsWithCorrectAnswers.map((question) => {
-      // Находим ответ пользователя на этот вопрос (если есть)
-      const userAnswer = latestResult.answers.find(
-        (a) =>
-          a.questionId === question.id && a.testResultId === latestResult.id,
-      );
-
-      // Получаем правильный ответ (берем первый, если их несколько)
+    // 2. Формируем результат только для вопросов, которые были в тесте
+    const result = latestResult.answers.map((answer) => {
       const correctAnswer =
-        question.answers[0]?.answer || 'Правильный ответ не найден';
+        answer.Question.answers[0]?.answer || 'Правильный ответ не найден';
 
       return {
-        questionId: question.id,
-        question: question.question,
-        userAnswer: userAnswer?.answer || 'Не выбран',
+        questionId: answer.questionId,
+        question: answer.Question.question,
+        userAnswer: answer.answer || 'Не выбран',
         correctAnswer: correctAnswer,
-        isCorrect: userAnswer
-          ? question.answers.some((a) => a.answer === userAnswer.answer)
-          : false,
+        isCorrect: answer.Question.answers.some(
+          (a) => a.answer === answer.answer,
+        ),
       };
     });
 
