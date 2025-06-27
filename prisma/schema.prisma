@@ -41,14 +41,15 @@ model Branch {
 }
 
 model Question {
-  id           Int        @id @default(autoincrement())
+  id           Int          @id @default(autoincrement())
   question     String
   photoName    String?
   answers      Answer[]
-  Nomination   Nomination @relation(fields: [nominationId], references: [id], onDelete: Cascade)
+  Nomination   Nomination   @relation(fields: [nominationId], references: [id], onDelete: Cascade)
   nominationId Int
-  Category     Category?  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  Category     Category?    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   categoryId   Int?
+  TestAnswer   TestAnswer[]
 }
 
 model Category {
@@ -60,26 +61,35 @@ model Category {
 }
 
 model Answer {
-  id           Int         @id @default(autoincrement())
-  answer       String
-  correctness  Boolean
-  Question     Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  questionId   Int
-  TestResult   TestResult? @relation(fields: [testResultId], references: [id])
-  testResultId Int?
+  id          Int          @id @default(autoincrement())
+  answer      String
+  correctness Boolean
+  Question    Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId  Int
+  TestAnswer  TestAnswer[]
 }
 
 model TestResult {
-  id           Int        @id @default(autoincrement())
+  id           Int          @id @default(autoincrement())
   userId       Int
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   nominationId Int
-  nomination   Nomination @relation(fields: [nominationId], references: [id])
+  nomination   Nomination   @relation(fields: [nominationId], references: [id])
   score        Int
   total        Int
   percentage   Float
   duration     String
   startedAt    DateTime
   finishedAt   DateTime
-  answers      Answer[]
+  testAnswers  TestAnswer[] // Связь с ответами пользователя
+}
+
+model TestAnswer {
+  id           Int        @id @default(autoincrement())
+  testResult   TestResult @relation(fields: [testResultId], references: [id])
+  testResultId Int
+  questionId   Int
+  question     Question   @relation(fields: [questionId], references: [id])
+  optionId     Int?
+  option       Answer?    @relation(fields: [optionId], references: [id])
 }

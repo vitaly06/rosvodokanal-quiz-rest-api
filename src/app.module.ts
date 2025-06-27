@@ -12,6 +12,7 @@ import { join } from 'path';
 import { AnswerModule } from './answer/answer.module';
 import { TestModule } from './test/test.module';
 import { CategoryModule } from './category/category.module';
+import { StatisticModule } from './statistic/statistic.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { CategoryModule } from './category/category.module';
     AnswerModule,
     TestModule,
     CategoryModule,
+    StatisticModule,
   ],
   controllers: [AppController],
   providers: [],

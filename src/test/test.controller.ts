@@ -18,7 +18,7 @@ export class TestController {
   @Post(':userId/finish')
   async finishTest(
     @Param('userId') userId: number,
-    @Body() dto?: Array<{ questionId: number; optionId: number }>,
+    @Body() dto?: Array<{ questionId: number; optionId: number | null }>,
   ) {
     return this.testService.finishTest(+userId, dto);
   }

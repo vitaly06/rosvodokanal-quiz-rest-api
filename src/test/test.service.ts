@@ -21,51 +21,48 @@ export class TestService {
   >();
 
   async startTest(dto: StartTestDto) {
-    const { number, nominationId } = dto;
+    const { number, nominationId } = { ...dto };
 
-    // Проверяем/создаем пользователя
-    let user = await this.prisma.user.findUnique({ where: { number } });
+    const user = await this.prisma.user.findUnique({
+      where: { number },
+    });
     if (!user) {
-      user = await this.prisma.user.create({
+      await this.prisma.user.create({
         data: {
           number,
         },
       });
     }
 
-    // Получаем номинацию
     const nomination = await this.prisma.nomination.findUnique({
       where: { id: nominationId },
     });
-
     if (!nomination) {
-      throw new NotFoundException('Номинация не найдена');
+      throw new NotFoundException('Номинация с таким id не найдена');
     }
-
+    // все вопросы номинации
     const allQuestions = await this.prisma.question.findMany({
       where: { nominationId },
-      select: { id: true },
+      select: {
+        id: true,
+      },
     });
 
-    if (allQuestions.length === 0) {
-      throw new NotFoundException('Для этой номинации нет вопросов');
+    if (allQuestions.length == 0) {
+      throw new NotFoundException('Для данной номинации не найдены вопросы');
     }
-
+    // выбираем кол-во вопросов для теста
     const questionCount = Math.min(
       nomination.questionsCount,
       allQuestions.length,
     );
 
-    // Перемешиваем вопросы и выбираем нужное количество
     const shuffledQuestions = [...allQuestions]
       .sort(() => 0.5 - Math.random())
       .slice(0, questionCount);
 
-    // Получаем полные данные для выбранных вопросов с ответами
     const selectedQuestions = await this.prisma.question.findMany({
-      where: {
-        id: { in: shuffledQuestions.map((q) => q.id) },
-      },
+      where: { id: { in: shuffledQuestions.map((a) => a.id) } },
       include: {
         answers: {
           select: {
@@ -86,14 +83,14 @@ export class TestService {
     const durationMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
     const finishedAt = new Date(startedAt.getTime() + durationMs);
 
-    // Запоминаем начало теста
+    //   // Запоминаем начало теста
     this.activeTests.set(user.id, {
       nominationId,
       startedAt,
       answers: [],
     });
 
-    // Формируем вопросы с вариантами ответов
+    // Вопросы с вариантами ответа
     const questionsWithOptions = selectedQuestions.map((question) => ({
       id: question.id,
       text: question.question,
@@ -119,21 +116,18 @@ export class TestService {
 
   async finishTest(
     userId: number,
-    answers: Array<{ questionId: number; optionId: number }>,
+    answers: Array<{ questionId: number; optionId: number | null }>,
   ) {
+    console.log(answers.length);
     if (!this.activeTests.has(userId)) {
       throw new BadRequestException('Тест не начат');
     }
-    let results;
+
     const testSession = this.activeTests.get(userId);
-    if (answers.length) {
-      results = await this.checkAnswers(answers);
-    } else {
-      results = {
-        correctAnswers: 0,
-        percentage: 0,
-      };
-    }
+
+    const results = answers.length
+      ? await this.checkAnswers(answers)
+      : { correctAnswers: 0, percentage: 0 };
 
     const finishedAt = new Date();
     const startedAt = testSession.startedAt;
@@ -142,25 +136,27 @@ export class TestService {
       where: { id: testSession.nominationId },
     });
 
-    // Сохраняем результат теста с привязкой к существующим ответам
     const testResult = await this.prisma.testResult.create({
       data: {
         userId,
-        nominationId: testSession.nominationId,
+        nominationId: nomination.id,
         score: results.correctAnswers,
         total: nomination.questionsCount,
         percentage: results.percentage,
         duration: this.formatDuration(String(startedAt), finishedAt),
         startedAt,
         finishedAt,
-        answers: {
-          connect: answers.map((a) => ({ id: a.optionId })),
+        testAnswers: {
+          create: answers.map((a) => ({
+            questionId: a.questionId,
+            optionId: a.optionId || null,
+          })),
         },
       },
       include: {
         nomination: true,
         user: true,
-        answers: true,
+        testAnswers: true,
       },
     });
 
@@ -227,25 +223,32 @@ export class TestService {
   }
 
   async getResultTable(userId: number, nominationId: number) {
-    // 1. Получаем последний результат теста пользователя для данной номинации
+    // 1. Получаем последний результат теста
     const latestResult = await this.prisma.testResult.findFirst({
       where: { userId, nominationId },
       orderBy: { finishedAt: 'desc' },
       include: {
-        answers: {
-          select: {
-            id: true,
-            answer: true,
-            questionId: true,
-            Question: {
+        testAnswers: {
+          include: {
+            // Подключаем связанный вопрос
+            question: {
               select: {
+                id: true,
                 question: true,
                 answers: {
                   where: { correctness: true },
                   select: {
+                    id: true,
                     answer: true,
                   },
                 },
+              },
+            },
+            // Подключаем выбранный ответ (если optionId не null)
+            option: {
+              select: {
+                id: true,
+                answer: true,
               },
             },
           },
@@ -257,23 +260,22 @@ export class TestService {
       throw new NotFoundException('Результаты теста не найдены');
     }
 
-    // 2. Формируем результат только для вопросов, которые были в тесте
-    const result = latestResult.answers.map((answer) => {
+    // 2. Формируем таблицу результатов
+    return latestResult.testAnswers.map((testAnswer) => {
       const correctAnswer =
-        answer.Question.answers[0]?.answer || 'Правильный ответ не найден';
+        testAnswer.question.answers[0]?.answer || 'Нет правильного ответа';
+      const userAnswer = testAnswer.optionId
+        ? testAnswer.option?.answer || 'Ответ не найден'
+        : 'Не выбран';
 
       return {
-        questionId: answer.questionId,
-        question: answer.Question.question,
-        userAnswer: answer.answer || 'Не выбран',
-        correctAnswer: correctAnswer,
-        isCorrect: answer.Question.answers.some(
-          (a) => a.answer === answer.answer,
-        ),
+        questionId: testAnswer.questionId,
+        question: testAnswer.question.question,
+        userAnswer,
+        correctAnswer,
+        isCorrect: testAnswer.option?.answer === correctAnswer,
       };
     });
-
-    return result;
   }
 
   private formatDuration(startedAt: string, finishedAt: Date): string {
