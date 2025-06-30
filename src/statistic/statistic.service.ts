@@ -6,7 +6,8 @@ export class StatisticService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getUserResults(branchId?: number, nominationId?: number) {
-    const filterResults = [[], []];
+    const filterResults = {};
+    filterResults['testResults'] = [];
 
     // Базовые условия для фильтрации
     const whereClause = {
@@ -88,7 +89,7 @@ export class StatisticService {
 
     // Приводим к нужному виду и добавляет в массив результатов
     results.forEach((item) => {
-      filterResults[0].push({
+      filterResults['testResults'].push({
         number: item.user.number,
         nomination: item.nomination.name,
         branch: item.user.branch.address,
@@ -97,12 +98,12 @@ export class StatisticService {
       });
     });
 
-    filterResults[1].push({
+    filterResults['blockStats'] = {
       passedTest: passesNum.length,
       gpa,
       minScore: minScore._min.score,
       maxScore: maxScore._max.score,
-    });
+    };
 
     return filterResults;
   }
