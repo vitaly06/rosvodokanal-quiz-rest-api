@@ -45,12 +45,12 @@ export class StatisticService {
         : 0;
 
     // Минимальное число баллов (с фильтрацией)
-    const minScore = await this.prisma.testResult.aggregate({
-      where: whereClause,
-      _min: {
-        score: true,
-      },
-    });
+    // const minScore = await this.prisma.testResult.aggregate({
+    //   where: whereClause,
+    //   _min: {
+    //     score: true,
+    //   },
+    // });
 
     // Максимальное число баллов (с фильтрацией)
     const maxScore = await this.prisma.testResult.aggregate({
@@ -64,12 +64,14 @@ export class StatisticService {
     const results = await this.prisma.testResult.findMany({
       where: whereClause,
       select: {
-        finishedAt: true,
+        duration: true,
         score: true,
         total: true,
+        percentage: true,
         user: {
           select: {
             number: true,
+            fullName: true,
             branch: {
               select: {
                 id: true,
@@ -87,34 +89,43 @@ export class StatisticService {
       },
     });
 
-    // Приводим к нужному виду и добавляет в массив результатов
+    // Приводим к нужному виду и добавляем в массив результатов
     results.forEach((item) => {
       filterResults['testResults'].push({
         number: item.user.number,
+        fullName: item.user.fullName,
         nomination: item.nomination.name,
         branch: item.user.branch.address,
-        date: this.formatDate(item.finishedAt),
+        date: item.duration,
         result: `${item.score}/${item.total}`,
+        percentage: item.percentage,
       });
+    });
+    // Сортируем по проценту результата и времени прохождения
+    filterResults['testResults'].sort((a: any, b: any) => {
+      if (a.percentage !== b.percentage) {
+        return b.percentage - a.percentage;
+      }
+
+      const parseDuration = (duration: string) => {
+        const minutesMatch = duration.match(/(\d+) мин/);
+        const secondsMatch = duration.match(/(\d+) сек/);
+        const minutes = minutesMatch ? parseInt(minutesMatch[1]) : 0;
+        const seconds = secondsMatch ? parseInt(secondsMatch[1]) : 0;
+        return minutes * 60 + seconds;
+      };
+
+      const aSeconds = parseDuration(a.date);
+      const bSeconds = parseDuration(b.date);
+      return aSeconds - bSeconds;
     });
 
     filterResults['blockStats'] = {
       passedTest: passesNum.length,
       gpa,
-      minScore: minScore._min.score,
       maxScore: maxScore._max.score,
     };
 
     return filterResults;
-  }
-
-  private formatDate(date: Date) {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = String(date.getFullYear()).slice(-2);
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-
-    return `${day}.${month}.${year} ${hours}:${minutes}`;
   }
 }
