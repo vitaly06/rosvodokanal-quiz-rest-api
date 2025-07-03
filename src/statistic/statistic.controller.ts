@@ -21,6 +21,13 @@ export class StatisticController {
     return await this.statisticService.getUserResults(+branchId, +nominationId);
   }
 
+  @ApiQuery({ name: 'nominationId', required: false })
+  @UseGuards(AdminGuard)
+  @Get('branch-statistic')
+  async getBranchStatistic(@Query('nominationId') nominationId?: string) {
+    return await this.statisticService.getBranchResults(+nominationId || null);
+  }
+
   // @ApiOperation({
   //   summary: 'Получение таблицы статистики тестов',
   // })

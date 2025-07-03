@@ -128,4 +128,61 @@ export class StatisticService {
 
     return filterResults;
   }
+
+  async getBranchResults(nominationId?: number | null) {
+    const result = [];
+
+    if (!nominationId) {
+      nominationId = (
+        await this.prisma.nomination.findUnique({
+          where: { name: 'Сварщик' },
+        })
+      )?.id;
+    }
+
+    const nomination = await this.prisma.nomination.findUnique({
+      where: { id: nominationId },
+      select: {
+        id: true,
+        name: true,
+        TestResult: {
+          select: {
+            id: true,
+            user: {
+              select: {
+                branch: {
+                  select: {
+                    address: true,
+                  },
+                },
+              },
+            },
+            score: true,
+          },
+        },
+      },
+    });
+
+    // Сумма баллов каждого филиала
+    const points = {};
+
+    const branchs = await this.prisma.branch.findMany();
+    for (const branch of branchs) {
+      points[branch.address] = 0;
+    }
+    for (const result of nomination.TestResult) {
+      points[result.user.branch.address] += result.score;
+    }
+    for (const branch of branchs) {
+      result.push({
+        nomination: nomination.name,
+        branch: branch.address,
+        totalScore: points[branch.address],
+      });
+    }
+
+    result.sort((a: any, b: any) => b.totalScore - a.totalScore);
+
+    return result;
+  }
 }
