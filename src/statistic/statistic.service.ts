@@ -70,6 +70,7 @@ export class StatisticService {
         percentage: true,
         user: {
           select: {
+            id: true,
             number: true,
             fullName: true,
             branch: {
@@ -92,10 +93,12 @@ export class StatisticService {
     // Приводим к нужному виду и добавляем в массив результатов
     results.forEach((item) => {
       filterResults['testResults'].push({
+        userId: item.user.id,
         number: item.user.number,
         fullName: item.user.fullName,
+        nominationId: item.nomination.id,
         nomination: item.nomination.name,
-        branch: item.user.branch.address,
+        branch: item.user.branch.address || 'Филиал не указан',
         date: item.duration,
         result: `${item.score}/${item.total}`,
         percentage: item.percentage,
@@ -122,7 +125,7 @@ export class StatisticService {
 
     filterResults['blockStats'] = {
       passedTest: passesNum.length,
-      gpa,
+      gpa: gpa.toFixed(1),
       maxScore: maxScore._max.score,
     };
 
@@ -171,7 +174,9 @@ export class StatisticService {
       points[branch.address] = 0;
     }
     for (const result of nomination.TestResult) {
-      points[result.user.branch.address] += result.score;
+      if (result.user.branch.address) {
+        points[result.user.branch.address] += result.score;
+      }
     }
     for (const branch of branchs) {
       result.push({

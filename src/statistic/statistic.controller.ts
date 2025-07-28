@@ -21,6 +21,9 @@ export class StatisticController {
     return await this.statisticService.getUserResults(+branchId, +nominationId);
   }
 
+  @ApiOperation({
+    summary: 'Получение таблицы статистики филиалов',
+  })
   @ApiQuery({ name: 'nominationId', required: false })
   @UseGuards(AdminGuard)
   @Get('branch-statistic')

@@ -36,7 +36,7 @@ COPY --from=development /usr/src/app/dist ./dist
 COPY --from=development /usr/src/app/prisma ./prisma
 
 # Устанавливаем только production зависимости
-RUN yarn install --production
+RUN yarn --production
 
 EXPOSE 3000
 

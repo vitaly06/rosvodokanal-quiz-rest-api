@@ -12,8 +12,20 @@ import { UpdateUserRequest } from './dto/update-user.dto';
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<User[]> {
-    return await this.prisma.user.findMany();
+  async findAll() {
+    return await this.prisma.user.findMany({
+      select: {
+        id: true,
+        number: true,
+        fullName: true,
+        branch: {
+          select: {
+            id: true,
+            address: true,
+          },
+        },
+      },
+    });
   }
 
   async findById(id: number): Promise<User> {

@@ -124,7 +124,6 @@ export class TestService {
     }
 
     const testSession = this.activeTests.get(userId);
-
     const results = answers.length
       ? await this.checkAnswers(answers)
       : { correctAnswers: 0, percentage: 0 };
@@ -135,7 +134,12 @@ export class TestService {
     const nomination = await this.prisma.nomination.findUnique({
       where: { id: testSession.nominationId },
     });
-
+    await this.prisma.testResult.deleteMany({
+      where: {
+        userId,
+        nominationId: testSession.nominationId,
+      },
+    });
     const testResult = await this.prisma.testResult.create({
       data: {
         userId,

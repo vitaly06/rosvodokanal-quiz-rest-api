@@ -23,7 +23,7 @@ export class UserController {
     summary: 'Получение всех пользователей',
   })
   @Get('all')
-  async findAll(): Promise<User[]> {
+  async findAll() {
     return await this.userService.findAll();
   }
 
