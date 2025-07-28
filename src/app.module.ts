@@ -13,6 +13,7 @@ import { AnswerModule } from './answer/answer.module';
 import { TestModule } from './test/test.module';
 import { CategoryModule } from './category/category.module';
 import { StatisticModule } from './statistic/statistic.module';
+import { PracticeTaskModule } from './practice-task/practice-task.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { StatisticModule } from './statistic/statistic.module';
     TestModule,
     CategoryModule,
     StatisticModule,
+    PracticeTaskModule,
   ],
   controllers: [AppController],
   providers: [],

@@ -16,13 +16,12 @@ model Admin {
 }
 
 model User {
-  id           Int            @id @default(autoincrement())
-  number       String         @unique
-  fullName     String?
-  branchId     Int?
-  branch       Branch?        @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  TestResult   TestResult[]
-  PracticeTask PracticeTask[]
+  id         Int          @id @default(autoincrement())
+  number     String       @unique
+  fullName   String?
+  branchId   Int?
+  branch     Branch?      @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  TestResult TestResult[]
 }
 
 model Nomination {
@@ -36,9 +35,10 @@ model Nomination {
 }
 
 model Branch {
-  id      Int    @id @default(autoincrement())
-  address String @unique
-  User    User[]
+  id           Int            @id @default(autoincrement())
+  address      String         @unique
+  User         User[]
+  PracticeTask PracticeTask[]
 }
 
 model Question {
@@ -96,9 +96,9 @@ model TestAnswer {
 }
 
 model PracticeTask {
-  id         Int  @id @default(autoincrement())
+  id         Int    @id @default(autoincrement())
   taskNumber Int
   score      Int
-  userId     Int
-  user       User @relation(fields: [userId], references: [id])
+  branchId   Int
+  branch     Branch @relation(fields: [branchId], references: [id])
 }
