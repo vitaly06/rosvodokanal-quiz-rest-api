@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { PracticeTaskService } from 'src/practice-task/practice-task.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class StatisticService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly practiceTaskService: PracticeTaskService,
+  ) {}
 
   async getUserResults(branchId?: number, nominationId?: number) {
     const filterResults = {};
@@ -189,5 +193,84 @@ export class StatisticService {
     result.sort((a: any, b: any) => b.totalScore - a.totalScore);
 
     return result;
+  }
+
+  async getTheoryTable() {
+    const branches = await this.prisma.branch.findMany();
+    let testResults;
+
+    let score, total;
+
+    const result = [];
+
+    for (const branch of branches) {
+      testResults = await this.prisma.testResult.findMany({
+        where: {
+          user: {
+            branch: {
+              id: branch.id,
+            },
+          },
+        },
+        select: {
+          score: true,
+          total: true,
+        },
+      });
+
+      total = testResults.reduce((sum, elem) => (sum += elem.total), 0);
+      score = testResults.reduce((sum, elem) => (sum += elem.score), 0);
+
+      result.push({
+        branchId: branch.id,
+        branchName: branch.address,
+        score: score || 0,
+        total: total || 0,
+      });
+    }
+
+    return result.sort((a, b) => b.score - a.score);
+  }
+
+  async getFullTable() {
+    const practiceResults = await this.practiceTaskService.allBranches();
+    const theoryResults = await this.getTheoryTable();
+
+    // Создаем мап для быстрого доступа к данным по теории по branchId
+    const theoryMap = new Map();
+    theoryResults.forEach((theoryItem) => {
+      theoryMap.set(theoryItem.branchId, {
+        theoryScore: theoryItem.score,
+        theoryTotal: theoryItem.total,
+      });
+    });
+
+    // Объединяем данные
+    const fullTable = practiceResults.map((practiceItem) => {
+      const theoryData = theoryMap.get(practiceItem.branchId) || {
+        theoryScore: 0,
+        theoryTotal: 0,
+      };
+
+      const totalScore =
+        practiceItem.tasks.reduce((sum, score) => sum + score, 0) +
+        theoryData.theoryScore;
+
+      return {
+        branchId: practiceItem.branchId,
+        branchName: practiceItem.branchName,
+        theoryScore: theoryData.theoryScore,
+        practiceScores: practiceItem.tasks.reduce(
+          (sum, score) => sum + score,
+          0,
+        ),
+        totalScore: totalScore,
+      };
+    });
+
+    // Сортируем по убыванию общей суммы баллов
+    fullTable.sort((a, b) => b.totalScore - a.totalScore);
+
+    return fullTable;
   }
 }

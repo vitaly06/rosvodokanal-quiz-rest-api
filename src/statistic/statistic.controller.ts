@@ -1,6 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { StatisticService } from './statistic.service';
-import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AdminGuard } from 'src/common/guards/admin.guard';
 
 @Controller('statistic')
@@ -31,6 +31,17 @@ export class StatisticController {
     return await this.statisticService.getBranchResults(+nominationId || null);
   }
 
+  @ApiTags('Таблица с баллами по теории')
+  @Get('theory-table')
+  async getTheoryTable() {
+    return await this.statisticService.getTheoryTable();
+  }
+
+  @ApiTags('Общая таблица с баллами')
+  @Get('full-table')
+  async getFullTable() {
+    return await this.statisticService.getFullTable();
+  }
   // @ApiOperation({
   //   summary: 'Получение таблицы статистики тестов',
   // })
