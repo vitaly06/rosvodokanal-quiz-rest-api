@@ -1,7 +1,17 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { TestService } from './test.service';
 import { StartTestDto } from './dto/start-test.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { Request, Response } from 'express';
 
 @Controller('tests')
 export class TestController {
@@ -11,16 +21,50 @@ export class TestController {
   ) {}
 
   @Post('start')
-  async startTest(@Body() dto: StartTestDto) {
-    return this.testService.startTest(dto);
+  async startTest(
+    @Body() dto: StartTestDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.testService.startTest(dto);
+    // Устанавливаем куку с sessionId
+    res.cookie('testSession', result.sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000, // 1 день
+    });
+    return result;
   }
 
-  @Post(':userId/finish')
+  @Post('finish')
   async finishTest(
-    @Param('userId') userId: number,
-    @Body() dto?: Array<{ questionId: number; optionId: number | null }>,
+    @Req() req: Request,
+    @Body()
+    body: {
+      answers: Array<{ questionId: number; optionId: number | null }>;
+      fullName?: string;
+      branchId?: number;
+    },
   ) {
-    return this.testService.finishTest(+userId, dto);
+    const sessionId = req.cookies?.testSession;
+    if (!sessionId) {
+      throw new BadRequestException('Сессия не найдена');
+    }
+    return this.testService.finishTest(
+      sessionId,
+      body.answers,
+      body.fullName,
+      body.branchId,
+    );
+  }
+
+  @Get('session')
+  async getSessionData(@Req() req: Request) {
+    const sessionId = req.cookies?.testSession;
+    if (!sessionId) {
+      throw new BadRequestException('Сессия не найдена');
+    }
+    return this.testService.getSessionData(sessionId);
   }
 
   @Get(':userId/results')

@@ -4,78 +4,61 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { SubmitAnswerDto } from './dto/submit-answer.dto';
 import { StartTestDto } from './dto/start-test.dto';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class TestService {
   constructor(private prisma: PrismaService) {}
 
-  private activeTests = new Map<
-    number,
+  private testSessions = new Map<
+    string, // sessionId
     {
+      userId: number;
       nominationId: number;
       startedAt: Date;
-      answers: SubmitAnswerDto[];
+      finishedAt: Date;
+      questionIds: number[];
     }
   >();
 
   async startTest(dto: StartTestDto) {
-    const { number, nominationId } = { ...dto };
+    const { number, nominationId } = dto;
 
-    const user = await this.prisma.user.findUnique({
-      where: { number },
-    });
+    // Находим или создаем пользователя
+    let user = await this.prisma.user.findUnique({ where: { number } });
     if (!user) {
-      await this.prisma.user.create({
-        data: {
-          number,
-        },
-      });
+      user = await this.prisma.user.create({ data: { number } });
     }
 
+    // Проверяем номинацию
     const nomination = await this.prisma.nomination.findUnique({
       where: { id: nominationId },
     });
     if (!nomination) {
-      throw new NotFoundException('Номинация с таким id не найдена');
+      throw new NotFoundException('Номинация не найдена');
     }
-    // все вопросы номинации
+
+    // Получаем вопросы
     const allQuestions = await this.prisma.question.findMany({
       where: { nominationId },
-      select: {
-        id: true,
-      },
+      select: { id: true },
     });
 
-    if (allQuestions.length == 0) {
-      throw new NotFoundException('Для данной номинации не найдены вопросы');
+    if (allQuestions.length === 0) {
+      throw new NotFoundException('Для номинации нет вопросов');
     }
-    // выбираем кол-во вопросов для теста
+
+    // Выбираем случайные вопросы
     const questionCount = Math.min(
       nomination.questionsCount,
       allQuestions.length,
     );
-
     const shuffledQuestions = [...allQuestions]
       .sort(() => 0.5 - Math.random())
       .slice(0, questionCount);
 
-    const selectedQuestions = await this.prisma.question.findMany({
-      where: { id: { in: shuffledQuestions.map((a) => a.id) } },
-      include: {
-        answers: {
-          select: {
-            id: true,
-            answer: true,
-          },
-          orderBy: { id: 'asc' },
-        },
-      },
-      orderBy: { id: 'asc' },
-    });
-
-    // Рассчитываем время начала и окончания теста
+    // Рассчитываем время окончания
     const startedAt = new Date();
     const [hours, minutes, seconds] = nomination.duration
       .split(':')
@@ -83,22 +66,32 @@ export class TestService {
     const durationMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
     const finishedAt = new Date(startedAt.getTime() + durationMs);
 
-    //   // Запоминаем начало теста
-    this.activeTests.set(user.id, {
+    // Генерируем уникальный sessionId
+    const sessionId = crypto.randomBytes(16).toString('hex');
+
+    // Сохраняем сессию
+    this.testSessions.set(sessionId, {
+      userId: user.id,
       nominationId,
       startedAt,
-      answers: [],
+      finishedAt,
+      questionIds: shuffledQuestions.map((q) => q.id),
     });
 
-    // Вопросы с вариантами ответа
-    const questionsWithOptions = selectedQuestions.map((question) => ({
-      id: question.id,
-      text: question.question,
-      photoName: question.photoName,
-      options: question.answers,
-    }));
+    // Получаем вопросы с вариантами ответов
+    const questionsWithOptions = await this.prisma.question.findMany({
+      where: { id: { in: shuffledQuestions.map((q) => q.id) } },
+      include: {
+        answers: {
+          select: { id: true, answer: true },
+          orderBy: { id: 'asc' },
+        },
+      },
+      orderBy: { id: 'asc' },
+    });
 
     return {
+      sessionId,
       user,
       nomination: {
         id: nomination.id,
@@ -106,50 +99,90 @@ export class TestService {
         duration: nomination.duration,
         totalQuestions: questionCount,
       },
-      questions: questionsWithOptions,
-      time: {
-        startedAt: startedAt.toISOString(),
-        finishedAt: finishedAt.toISOString(),
+      questions: questionsWithOptions.map((q) => ({
+        id: q.id,
+        text: q.question,
+        photoName: q.photoName,
+        options: q.answers,
+      })),
+      finishedAt: finishedAt.toISOString(),
+    };
+  }
+
+  async getSessionData(sessionId: string) {
+    const session = this.testSessions.get(sessionId);
+    if (!session) {
+      throw new NotFoundException('Сессия не найдена');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: session.userId },
+    });
+
+    const nomination = await this.prisma.nomination.findUnique({
+      where: { id: session.nominationId },
+    });
+
+    const questions = await this.prisma.question.findMany({
+      where: { id: { in: session.questionIds } },
+      include: {
+        answers: {
+          select: { id: true, answer: true },
+          orderBy: { id: 'asc' },
+        },
       },
+      orderBy: { id: 'asc' },
+    });
+
+    return {
+      user,
+      nomination,
+      questions: questions.map((q) => ({
+        id: q.id,
+        text: q.question,
+        photoName: q.photoName,
+        options: q.answers,
+      })),
+      finishedAt: session.finishedAt.toISOString(),
     };
   }
 
   async finishTest(
-    userId: number,
+    sessionId: string,
     answers: Array<{ questionId: number; optionId: number | null }>,
+    fullName?: string,
+    branchId?: number,
   ) {
-    console.log(answers.length);
-    if (!this.activeTests.has(userId)) {
-      throw new BadRequestException('Тест не начат');
+    const session = this.testSessions.get(sessionId);
+    if (!session) {
+      throw new BadRequestException('Сессия не найдена');
     }
 
-    const testSession = this.activeTests.get(userId);
-    const results = answers.length
-      ? await this.checkAnswers(answers)
-      : { correctAnswers: 0, percentage: 0 };
+    // Обновляем данные пользователя, если переданы
+    if (fullName || branchId) {
+      await this.prisma.user.update({
+        where: { id: session.userId },
+        data: {
+          fullName,
+          branchId,
+        },
+      });
+    }
 
-    const finishedAt = new Date();
-    const startedAt = testSession.startedAt;
+    // Проверяем ответы
+    const results = await this.checkAnswers(answers);
 
-    const nomination = await this.prisma.nomination.findUnique({
-      where: { id: testSession.nominationId },
-    });
-    await this.prisma.testResult.deleteMany({
-      where: {
-        userId,
-        nominationId: testSession.nominationId,
-      },
-    });
+    // Сохраняем результат теста
     const testResult = await this.prisma.testResult.create({
       data: {
-        userId,
-        nominationId: nomination.id,
+        userId: session.userId,
+        nominationId: session.nominationId,
         score: results.correctAnswers,
-        total: nomination.questionsCount,
+        total: results.totalQuestions,
         percentage: results.percentage,
-        duration: this.formatDuration(String(startedAt), finishedAt),
-        startedAt,
-        finishedAt,
+        duration: this.formatDuration(session.startedAt, new Date()),
+        startedAt: session.startedAt,
+        finishedAt: new Date(),
         testAnswers: {
           create: answers.map((a) => ({
             questionId: a.questionId,
@@ -164,8 +197,7 @@ export class TestService {
       },
     });
 
-    this.activeTests.delete(userId);
-
+    // Не удаляем сессию сразу - можно оставить для просмотра результатов
     return {
       result: testResult,
       details: results,
@@ -228,6 +260,7 @@ export class TestService {
 
   async getResultTable(userId: number, nominationId: number) {
     // 1. Получаем последний результат теста
+    console.log(userId);
     const latestResult = await this.prisma.testResult.findFirst({
       where: { userId, nominationId },
       orderBy: { finishedAt: 'desc' },
@@ -282,9 +315,8 @@ export class TestService {
     });
   }
 
-  private formatDuration(startedAt: string, finishedAt: Date): string {
-    const start = new Date(startedAt);
-    const diff = (finishedAt.getTime() - start.getTime()) / 1000;
+  private formatDuration(startedAt: Date, finishedAt: Date): string {
+    const diff = (finishedAt.getTime() - startedAt.getTime()) / 1000; // разница в секундах
     const minutes = Math.floor(diff / 60);
     const seconds = Math.round(diff % 60);
     return `${minutes} мин ${seconds} сек`;

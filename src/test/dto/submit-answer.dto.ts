@@ -1,14 +1,28 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsPositive } from 'class-validator';
+import { IsInt, IsOptional, IsString } from 'class-validator';
 
-export class SubmitAnswerDto {
+export class SubmitAnswersDto {
+  @ApiProperty({ type: () => AnswerDto, isArray: true })
+  answers: AnswerDto[];
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  fullName?: string;
+
+  @ApiProperty({ required: false })
+  @IsInt()
+  @IsOptional()
+  branchId?: number;
+}
+
+export class AnswerDto {
   @ApiProperty()
   @IsInt()
-  @IsPositive()
   questionId: number;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
   @IsInt()
-  @IsPositive()
-  answerId: string;
+  @IsOptional()
+  optionId?: number | null;
 }

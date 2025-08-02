@@ -102,7 +102,7 @@ export class StatisticService {
         fullName: item.user.fullName,
         nominationId: item.nomination.id,
         nomination: item.nomination.name,
-        branch: item.user.branch.address || 'Филиал не указан',
+        branch: item.user.branch?.address || 'Филиал не указан',
         date: item.duration,
         result: `${item.score}/${item.total}`,
         percentage: item.percentage,
