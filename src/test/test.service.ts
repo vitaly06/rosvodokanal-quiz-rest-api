@@ -12,7 +12,7 @@ export class TestService {
   constructor(private prisma: PrismaService) {}
 
   private testSessions = new Map<
-    string, // sessionId
+    string,
     {
       userId: number;
       nominationId: number;
@@ -155,17 +155,14 @@ export class TestService {
   ) {
     const session = this.testSessions.get(sessionId);
     if (!session) {
-      throw new BadRequestException('Сессия не найдена');
+      throw new BadRequestException('Сессия не найдена или истекла');
     }
 
-    // Обновляем данные пользователя, если переданы
+    // Обновляем данные пользователя
     if (fullName || branchId) {
       await this.prisma.user.update({
         where: { id: session.userId },
-        data: {
-          fullName,
-          branchId,
-        },
+        data: { fullName, branchId },
       });
     }
 
@@ -197,7 +194,6 @@ export class TestService {
       },
     });
 
-    // Не удаляем сессию сразу - можно оставить для просмотра результатов
     return {
       result: testResult,
       details: results,
@@ -212,12 +208,12 @@ export class TestService {
       where: { id: { in: questionIds } },
       include: { answers: true },
     });
-    const questionCount = await this.prisma.nomination.findUnique({
+
+    const nomination = await this.prisma.nomination.findUnique({
       where: { id: questions[0].nominationId },
-      select: {
-        questionsCount: true,
-      },
+      select: { questionsCount: true },
     });
+
     let correctAnswers = 0;
     const detailedResults = [];
 
@@ -230,9 +226,6 @@ export class TestService {
 
       detailedResults.push({
         questionId: question.id,
-        questionText: question.question,
-        userAnswerId: userAnswer?.optionId || null,
-        correctAnswerId: correctAnswer?.id || null,
         isCorrect: !!isCorrect,
       });
     }
@@ -241,15 +234,23 @@ export class TestService {
       correctAnswers,
       totalQuestions: questions.length,
       percentage: Math.round(
-        (correctAnswers / questionCount.questionsCount) * 100,
+        (correctAnswers / nomination.questionsCount) * 100,
       ),
       answers: detailedResults,
     };
   }
 
-  async getResult(userId: number) {
+  async getResult(sessionId: string) {
+    const session = this.testSessions.get(sessionId);
+    if (!session) {
+      throw new BadRequestException('Сессия не найдена');
+    }
+
     return this.prisma.testResult.findMany({
-      where: { userId },
+      where: {
+        userId: session.userId,
+        nominationId: session.nominationId,
+      },
       include: { nomination: true },
     });
   }
@@ -260,14 +261,12 @@ export class TestService {
 
   async getResultTable(userId: number, nominationId: number) {
     // 1. Получаем последний результат теста
-    console.log(userId);
     const latestResult = await this.prisma.testResult.findFirst({
       where: { userId, nominationId },
       orderBy: { finishedAt: 'desc' },
       include: {
         testAnswers: {
           include: {
-            // Подключаем связанный вопрос
             question: {
               select: {
                 id: true,
@@ -281,7 +280,6 @@ export class TestService {
                 },
               },
             },
-            // Подключаем выбранный ответ (если optionId не null)
             option: {
               select: {
                 id: true,
@@ -297,26 +295,31 @@ export class TestService {
       throw new NotFoundException('Результаты теста не найдены');
     }
 
-    // 2. Формируем таблицу результатов
-    return latestResult.testAnswers.map((testAnswer) => {
-      const correctAnswer =
-        testAnswer.question.answers[0]?.answer || 'Нет правильного ответа';
-      const userAnswer = testAnswer.optionId
-        ? testAnswer.option?.answer || 'Ответ не найден'
-        : 'Не выбран';
+    // 2. Получаем только те вопросы, которые были в тесте
+    const testQuestionIds = latestResult.testAnswers.map((a) => a.questionId);
 
-      return {
-        questionId: testAnswer.questionId,
-        question: testAnswer.question.question,
-        userAnswer,
-        correctAnswer,
-        isCorrect: testAnswer.option?.answer === correctAnswer,
-      };
-    });
+    // 3. Формируем таблицу результатов только для вопросов теста
+    return latestResult.testAnswers
+      .filter((answer) => testQuestionIds.includes(answer.questionId))
+      .map((testAnswer) => {
+        const correctAnswer =
+          testAnswer.question.answers[0]?.answer || 'Нет правильного ответа';
+        const userAnswer = testAnswer.optionId
+          ? testAnswer.option?.answer || 'Ответ не найден'
+          : 'Не выбран';
+
+        return {
+          questionId: testAnswer.questionId,
+          question: testAnswer.question.question,
+          userAnswer,
+          correctAnswer,
+          isCorrect: testAnswer.option?.answer === correctAnswer,
+        };
+      });
   }
 
   private formatDuration(startedAt: Date, finishedAt: Date): string {
-    const diff = (finishedAt.getTime() - startedAt.getTime()) / 1000; // разница в секундах
+    const diff = (finishedAt.getTime() - startedAt.getTime()) / 1000;
     const minutes = Math.floor(diff / 60);
     const seconds = Math.round(diff % 60);
     return `${minutes} мин ${seconds} сек`;

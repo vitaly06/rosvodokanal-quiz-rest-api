@@ -12,6 +12,7 @@ import { TestService } from './test.service';
 import { StartTestDto } from './dto/start-test.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Request, Response } from 'express';
+import { SubmitAnswersDto } from './dto/submit-answer.dto';
 
 @Controller('tests')
 export class TestController {
@@ -26,7 +27,6 @@ export class TestController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.testService.startTest(dto);
-    // Устанавливаем куку с sessionId
     res.cookie('testSession', result.sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -39,17 +39,20 @@ export class TestController {
   @Post('finish')
   async finishTest(
     @Req() req: Request,
-    @Body()
-    body: {
-      answers: Array<{ questionId: number; optionId: number | null }>;
-      fullName?: string;
-      branchId?: number;
-    },
+    @Body() body: SubmitAnswersDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const sessionId = req.cookies?.testSession;
     if (!sessionId) {
       throw new BadRequestException('Сессия не найдена');
     }
+
+    res.clearCookie('testSession', {
+      httpOnly: true, // Если кука была httpOnly
+      sameSite: 'strict', // Если использовали sameSite
+      secure: true, // Если работаем через HTTPS
+    });
+
     return this.testService.finishTest(
       sessionId,
       body.answers,
@@ -67,9 +70,13 @@ export class TestController {
     return this.testService.getSessionData(sessionId);
   }
 
-  @Get(':userId/results')
-  async getResults(@Param('userId') userId: string) {
-    return await this.testService.getResult(+userId);
+  @Get('results')
+  async getResults(@Req() req: Request) {
+    const sessionId = req.cookies?.testSession;
+    if (!sessionId) {
+      throw new BadRequestException('Сессия не найдена');
+    }
+    return this.testService.getResult(sessionId);
   }
 
   @Get('all-results')
@@ -77,7 +84,6 @@ export class TestController {
     return await this.testService.getAllResult();
   }
 
-  // таблица с ответами пользователя и верными ответами
   @Get('result-table/:userId/:nominationId')
   async getResultTable(
     @Param('userId') userId: string,
