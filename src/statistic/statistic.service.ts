@@ -195,7 +195,14 @@ export class StatisticService {
     return result;
   }
 
-  async getTheoryTable() {
+  async getTheoryTable(nominationId: number | null) {
+    if (!nominationId) {
+      nominationId = (
+        await this.prisma.nomination.findUnique({
+          where: { name: 'Сварщик' },
+        })
+      )?.id;
+    }
     const branches = await this.prisma.branch.findMany();
     let testResults;
 
@@ -210,6 +217,9 @@ export class StatisticService {
             branch: {
               id: branch.id,
             },
+          },
+          nomination: {
+            id: nominationId,
           },
         },
         select: {
@@ -234,7 +244,7 @@ export class StatisticService {
 
   async getFullTable() {
     const practiceResults = await this.practiceTaskService.allBranches();
-    const theoryResults = await this.getTheoryTable();
+    const theoryResults = await this.getTheoryTable(null);
 
     // Создаем мап для быстрого доступа к данным по теории по branchId
     const theoryMap = new Map();

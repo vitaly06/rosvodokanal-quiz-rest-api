@@ -33,8 +33,8 @@ export class StatisticController {
 
   @ApiTags('Таблица с баллами по теории')
   @Get('theory-table')
-  async getTheoryTable() {
-    return await this.statisticService.getTheoryTable();
+  async getTheoryTable(@Query('nominationId') nominationId: string) {
+    return await this.statisticService.getTheoryTable(+nominationId || null);
   }
 
   @ApiTags('Общая таблица с баллами')
