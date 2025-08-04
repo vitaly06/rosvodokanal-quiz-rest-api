@@ -242,45 +242,45 @@ export class StatisticService {
     return result.sort((a, b) => b.score - a.score);
   }
 
-  async getFullTable() {
-    const practiceResults = await this.practiceTaskService.allBranches();
-    const theoryResults = await this.getTheoryTable(null);
+  // async getFullTable() {
+  //   const practiceResults = await this.practiceTaskService.allBranches();
+  //   const theoryResults = await this.getTheoryTable(null);
 
-    // Создаем мап для быстрого доступа к данным по теории по branchId
-    const theoryMap = new Map();
-    theoryResults.forEach((theoryItem) => {
-      theoryMap.set(theoryItem.branchId, {
-        theoryScore: theoryItem.score,
-        theoryTotal: theoryItem.total,
-      });
-    });
+  //   // Создаем мап для быстрого доступа к данным по теории по branchId
+  //   const theoryMap = new Map();
+  //   theoryResults.forEach((theoryItem) => {
+  //     theoryMap.set(theoryItem.branchId, {
+  //       theoryScore: theoryItem.score,
+  //       theoryTotal: theoryItem.total,
+  //     });
+  //   });
 
-    // Объединяем данные
-    const fullTable = practiceResults.map((practiceItem) => {
-      const theoryData = theoryMap.get(practiceItem.branchId) || {
-        theoryScore: 0,
-        theoryTotal: 0,
-      };
+  //   // Объединяем данные
+  //   const fullTable = practiceResults.map((practiceItem) => {
+  //     const theoryData = theoryMap.get(practiceItem.branchId) || {
+  //       theoryScore: 0,
+  //       theoryTotal: 0,
+  //     };
 
-      const totalScore =
-        practiceItem.tasks.reduce((sum, score) => sum + score, 0) +
-        theoryData.theoryScore;
+  //     const totalScore =
+  //       practiceItem.tasks.reduce((sum, score) => sum + score, 0) +
+  //       theoryData.theoryScore;
 
-      return {
-        branchId: practiceItem.branchId,
-        branchName: practiceItem.branchName,
-        theoryScore: theoryData.theoryScore,
-        practiceScores: practiceItem.tasks.reduce(
-          (sum, score) => sum + score,
-          0,
-        ),
-        totalScore: totalScore,
-      };
-    });
+  //     return {
+  //       branchId: practiceItem.branchId,
+  //       branchName: practiceItem.branchName,
+  //       theoryScore: theoryData.theoryScore,
+  //       practiceScores: practiceItem.tasks.reduce(
+  //         (sum, score) => sum + score,
+  //         0,
+  //       ),
+  //       totalScore: totalScore,
+  //     };
+  //   });
 
-    // Сортируем по убыванию общей суммы баллов
-    fullTable.sort((a, b) => b.totalScore - a.totalScore);
+  //   // Сортируем по убыванию общей суммы баллов
+  //   fullTable.sort((a, b) => b.totalScore - a.totalScore);
 
-    return fullTable;
-  }
+  //   return fullTable;
+  // }
 }
