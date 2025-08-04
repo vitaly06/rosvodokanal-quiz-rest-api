@@ -14,7 +14,7 @@ export class PracticeTaskController {
 
   @Get('table')
   async getPracticeTable(@Query() dto: GetPracticeTableDto) {
-    return this.practiceTaskService.getPracticeTable(dto.nominationId);
+    return this.practiceTaskService.getPracticeTable(+dto.nominationId);
   }
 
   @Post('update')

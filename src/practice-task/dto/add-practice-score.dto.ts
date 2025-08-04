@@ -1,11 +1,13 @@
 // get-practice-table.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsOptional, IsInt, IsNotEmpty, IsString } from 'class-validator';
 
 export class GetPracticeTableDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsInt()
+  @Type(() => Number)
   nominationId?: number;
 }
 
@@ -15,11 +17,13 @@ export class UpdatePracticeTaskDto {
   @ApiProperty()
   @IsInt()
   @IsNotEmpty()
+  @Type(() => Number)
   id: number;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsInt()
+  @Type(() => Number)
   score?: number;
 
   @ApiProperty({ required: false })
@@ -30,5 +34,6 @@ export class UpdatePracticeTaskDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsInt()
+  @Type(() => Number)
   penalty?: number;
 }
