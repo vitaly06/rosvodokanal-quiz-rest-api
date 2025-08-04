@@ -1,4 +1,3 @@
-// practice-task.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdatePracticeTaskDto } from './dto/add-practice-score.dto';
@@ -20,57 +19,45 @@ export class PracticeTaskService {
 
     for (const branch of branches) {
       const tasks = await this.prisma.practiceTask.findMany({
-        where: { branchId: branch.id, nominationId },
+        where: {
+          branchId: branch.id,
+          nominationId: nominationId,
+        },
         orderBy: { taskNumber: 'asc' },
       });
 
-      const taskData = Array(3).fill({ score: 0, time: '00:00', penalty: 0 });
-      let totalScore = 0;
-      let totalTime = 0; // в секундах для сортировки
-
-      tasks.forEach((task) => {
-        if (task.taskNumber >= 1 && task.taskNumber <= 3) {
-          taskData[task.taskNumber - 1] = {
-            score: task.score,
-            time: task.time || '00:00',
-            penalty: task.penalty || 0,
+      // Создаем массив для 3 задач с дефолтными значениями
+      const taskResults = Array(3)
+        .fill(null)
+        .map((_, index) => {
+          const task = tasks.find((t) => t.taskNumber === index + 1);
+          return {
+            score: task?.score || 0,
+            time: task?.time || '00:00',
+            penalty: task?.penalty || 0,
           };
+        });
 
-          totalScore += task.score - (task.penalty || 0);
-
-          // Конвертируем время в секунды
-          if (task.time) {
-            const [minutes, seconds] = task.time.split(':').map(Number);
-            totalTime += minutes * 60 + seconds;
-          }
-        }
-      });
+      // Считаем общий балл (сумма score - сумма penalty)
+      const totalScore = taskResults.reduce((sum, task) => {
+        return sum + (task.score - task.penalty);
+      }, 0);
 
       result.push({
         branchId: branch.id,
         branchName: branch.address,
-        tasks: taskData,
-        totalScore,
-        totalTime, // для сортировки
+        tasks: taskResults, // Массив задач
+        total: totalScore,
       });
     }
 
-    // Сортировка по totalScore (убывание), затем по totalTime (возрастание)
-    result.sort((a, b) => {
-      if (b.totalScore !== a.totalScore) {
-        return b.totalScore - a.totalScore;
-      }
-      return a.totalTime - b.totalTime;
-    });
+    // Сортировка по total (убывание), затем по времени (если нужно)
+    result.sort((a, b) => b.total - a.total);
 
-    // Формируем финальный результат с местами
+    // Добавляем места
     return result.map((item, index) => ({
       place: index + 1,
-      branchName: item.branchName,
-      task1: item.tasks[0],
-      task2: item.tasks[1],
-      task3: item.tasks[2],
-      total: item.totalScore,
+      ...item,
     }));
   }
 
@@ -80,31 +67,51 @@ export class PracticeTaskService {
     const result = [];
 
     for (const branch of branches) {
-      const branchData: any = {
-        branchId: branch.id,
-        branchName: branch.address,
-        totalScore: 0,
-      };
+      const tasks = await this.prisma.practiceTask.findMany({
+        where: { branchId: branch.id },
+        include: { nomination: true },
+      });
 
-      for (const nomination of nominations) {
-        const tasks = await this.prisma.practiceTask.findMany({
-          where: { branchId: branch.id, nominationId: nomination.id },
-        });
+      // Группируем задачи по номинациям
+      const tasksByNomination = tasks.reduce((acc, task) => {
+        if (!acc[task.nomination.name]) {
+          acc[task.nomination.name] = [];
+        }
+        acc[task.nomination.name].push(task);
+        return acc;
+      }, {});
 
-        const nominationScore = tasks.reduce((sum, task) => {
+      // Формируем массив номинаций с баллами
+      const nominationResults = nominations.map((nomination) => {
+        const tasks = tasksByNomination[nomination.name] || [];
+        const total = tasks.reduce((sum, task) => {
           return sum + (task.score - (task.penalty || 0));
         }, 0);
 
-        branchData[nomination.name] = nominationScore;
-        branchData.totalScore += nominationScore;
-      }
+        return {
+          name: nomination.name,
+          points: total,
+        };
+      });
 
-      result.push(branchData);
+      // Общий балл по всем номинациям
+      const totalScore = nominationResults.reduce(
+        (sum, item) => sum + item.points,
+        0,
+      );
+
+      result.push({
+        branchId: branch.id,
+        branchName: branch.address,
+        tasks: nominationResults, // Массив номинаций с баллами
+        total: totalScore,
+      });
     }
 
-    // Сортировка по totalScore (убывание)
-    result.sort((a, b) => b.totalScore - a.totalScore);
+    // Сортировка по total (убывание)
+    result.sort((a, b) => b.total - a.total);
 
+    // Добавляем места
     return result.map((item, index) => ({
       place: index + 1,
       ...item,
