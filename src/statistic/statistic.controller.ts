@@ -37,11 +37,11 @@ export class StatisticController {
     return await this.statisticService.getTheoryTable(+nominationId || null);
   }
 
-  @ApiTags('Общая таблица с баллами')
-  @Get('full-table')
-  async getFullTable() {
-    return await this.statisticService.getFullTable();
-  }
+  // @ApiTags('Общая таблица с баллами')
+  // @Get('full-table')
+  // async getFullTable() {
+  //   return await this.statisticService.getFullTable();
+  // }
   // @ApiOperation({
   //   summary: 'Получение таблицы статистики тестов',
   // })
