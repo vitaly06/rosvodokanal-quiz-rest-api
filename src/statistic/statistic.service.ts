@@ -206,7 +206,7 @@ export class StatisticService {
     const branches = await this.prisma.branch.findMany();
     let testResults;
 
-    let score, total;
+    let score;
 
     const result = [];
 
@@ -224,18 +224,18 @@ export class StatisticService {
         },
         select: {
           score: true,
-          total: true,
+          // total: true,
         },
       });
 
-      total = testResults.reduce((sum, elem) => (sum += elem.total), 0);
+      // total = testResults.reduce((sum, elem) => (sum += elem.total), 0);
       score = testResults.reduce((sum, elem) => (sum += elem.score), 0);
 
       result.push({
         branchId: branch.id,
         branchName: branch.address,
         score: score || 0,
-        total: total || 0,
+        // total: total || 0,
       });
     }
 

@@ -25,13 +25,14 @@ model User {
 }
 
 model Nomination {
-  id             Int          @id @default(autoincrement())
-  name           String       @unique
+  id             Int            @id @default(autoincrement())
+  name           String         @unique
   duration       String
   questionsCount Int
   questions      Question[]
   TestResult     TestResult[]
   Category       Category[]
+  PracticeTask   PracticeTask[]
 }
 
 model Branch {
@@ -96,9 +97,13 @@ model TestAnswer {
 }
 
 model PracticeTask {
-  id         Int    @id @default(autoincrement())
-  taskNumber Int
-  score      Int
-  branchId   Int
-  branch     Branch @relation(fields: [branchId], references: [id])
+  id           Int         @id @default(autoincrement())
+  taskNumber   Int
+  score        Int
+  time         String?     @db.VarChar(5) // Формат мм:сс
+  penalty      Int?        @default(0)
+  branchId     Int
+  branch       Branch      @relation(fields: [branchId], references: [id])
+  nominationId Int?
+  nomination   Nomination? @relation(fields: [nominationId], references: [id])
 }
