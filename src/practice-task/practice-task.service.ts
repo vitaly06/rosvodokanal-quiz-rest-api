@@ -72,12 +72,15 @@ export class PracticeTaskService {
         include: { nomination: true },
       });
 
-      // Группируем задачи по номинациям
+      // Группируем задачи по номинациям с проверкой на null
       const tasksByNomination = tasks.reduce((acc, task) => {
-        if (!acc[task.nomination.name]) {
-          acc[task.nomination.name] = [];
+        // Проверяем, что nomination существует и имеет name
+        if (task.nomination?.name) {
+          if (!acc[task.nomination.name]) {
+            acc[task.nomination.name] = [];
+          }
+          acc[task.nomination.name].push(task);
         }
-        acc[task.nomination.name].push(task);
         return acc;
       }, {});
 
@@ -103,7 +106,7 @@ export class PracticeTaskService {
       result.push({
         branchId: branch.id,
         branchName: branch.address,
-        tasks: nominationResults, // Массив номинаций с баллами
+        tasks: nominationResults,
         total: totalScore,
       });
     }
