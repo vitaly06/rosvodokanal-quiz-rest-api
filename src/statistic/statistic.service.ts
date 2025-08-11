@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PracticeTaskService } from 'src/practice-task/practice-task.service';
+// import { PracticeTaskService } from 'src/practice-task/practice-task.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class StatisticService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly practiceTaskService: PracticeTaskService,
+    // private readonly practiceTaskService: PracticeTaskService,
   ) {}
 
   async getUserResults(branchId?: number, nominationId?: number) {

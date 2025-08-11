@@ -15,31 +15,58 @@ model Admin {
   updatedAt DateTime @updatedAt
 }
 
+model PracticNomination {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+}
+
 model User {
-  id         Int          @id @default(autoincrement())
-  number     String       @unique @db.Char(6)
-  fullName   String?
-  branchId   Int?
-  branch     Branch?      @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  TestResult TestResult[]
+  id                       Int                   @id @default(autoincrement())
+  number                   String                @unique @db.Char(6)
+  fullName                 String?
+  branchId                 Int?
+  branch                   Branch?               @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  participatingNominations Int[]                 @default([]) // номинации в которых участвует юзер
+  TestResult               TestResult[]
+  AvrPlumberTask           AvrPlumberTask[]
+  AvrSewerPlumberTask      AvrSewerPlumberTask[]
+  CarDriverTask            CarDriverTask[]
+  TruckDriverTask          TruckDriverTask[]
+  ChemLabTechnician        ChemLabTechnician[]
 }
 
 model Nomination {
-  id             Int            @id @default(autoincrement())
-  name           String         @unique
-  duration       String
-  questionsCount Int
-  questions      Question[]
-  TestResult     TestResult[]
-  Category       Category[]
-  PracticeTask   PracticeTask[]
+  id                  Int                   @id @default(autoincrement())
+  name                String                @unique
+  duration            String
+  questionsCount      Int
+  questions           Question[]
+  TestResult          TestResult[]
+  Category            Category[]
+  PracticeTask        PracticeTask[]
+  AvrMechanicTask     AvrMechanicTask[]
+  WelderTask          WelderTask[]
+  AvrPlumberTask      AvrPlumberTask[]
+  AvrSewerTask        AvrSewerTask[]
+  AvrSewerPlumberTask AvrSewerPlumberTask[]
+  CarDriverTask       CarDriverTask[]
+  TruckDriverTask     TruckDriverTask[]
+  ChemLabTechnician   ChemLabTechnician[]
 }
 
 model Branch {
-  id           Int            @id @default(autoincrement())
-  address      String         @unique
-  User         User[]
-  PracticeTask PracticeTask[]
+  id                  Int                   @id @default(autoincrement())
+  address             String                @unique
+  User                User[]
+  PracticeTask        PracticeTask[]
+  AvrMechanicTask     AvrMechanicTask[]
+  WelderTask          WelderTask[]
+  AvrPlumberTask      AvrPlumberTask[]
+  AvrSewerTask        AvrSewerTask[]
+  AvrSewerPlumberTask AvrSewerPlumberTask[]
+  CarDriverTask       CarDriverTask[]
+  TruckDriverTask     TruckDriverTask[]
+  ChemLabTechnician   ChemLabTechnician[]
 }
 
 model Question {
@@ -106,4 +133,230 @@ model PracticeTask {
   branch       Branch      @relation(fields: [branchId], references: [id])
   nominationId Int?
   nomination   Nomination? @relation(fields: [nominationId], references: [id])
+
+  @@unique([branchId, nominationId], name: "branch_nomination_task")
+}
+
+// Лучшая бригада  АВР по водопроводным сетям - 2025
+model AvrMechanicTask {
+  id             Int     @id @default(autoincrement())
+  taskNumber     Int // Номер этапа (1, 2, 3)
+  time           String  @db.VarChar(5) // Время в формате мм:сс (например "15:30")
+  timeScore      Int // Баллы за время (30-60)
+  hydraulicTest  Boolean // Гидравлические испытания (+/-)
+  safetyPenalty  Int // Штраф по охране труда (0-15)
+  culturePenalty Int // Штраф за культуру (0-5)
+  qualityPenalty Int // Штраф за качество
+  stageScore     Int // Баллы за этап (вычисляемое поле)
+
+  branchId     Int
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  nominationId Int
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
+
+  @@unique([branchId, nominationId, taskNumber], name: "avr_mechanic_unique_task")
+}
+
+// Сварщик
+model WelderTask {
+  id                  Int     @id @default(autoincrement())
+  taskNumber          Int // 1 или 2 этап
+  time                String? @db.VarChar(5) // Время в формате мм:сс
+  timeScore           Float // Баллы за время (вычисляемое)
+  culturePenalty      Float // Штраф за культуру
+  safetyPenalty       Float // Штраф за охрану труда
+  operationalControl  Float // Операционный контроль
+  visualMeasurement   Float // Визуально-измерительный контроль
+  radiographicControl Float // Радиографический контроль
+  stageScore          Float // Общий балл за этап
+
+  participantName String // ФИО участника
+  branchId        Int
+  branch          Branch     @relation(fields: [branchId], references: [id])
+  nominationId    Int
+  nomination      Nomination @relation(fields: [nominationId], references: [id])
+
+  @@unique([branchId, nominationId, taskNumber, participantName], name: "welder_unique_task")
+}
+
+// Лучший слесарь АВР по водопроводным сетям
+model AvrPlumberTask {
+  id             Int      @id @default(autoincrement())
+  time           String   @db.VarChar(5) // Время в формате мм:сс
+  timeScore      Float // Баллы за время (50-25)
+  hydraulicTest  Boolean // Гидравлические испытания (+/-)
+  safetyPenalty  Float // Штраф по охране труда (0-15)
+  culturePenalty Float // Штраф за культуру (0-5)
+  qualityPenalty Float // Штраф за качество
+  stageScore     Float // Баллы за этап
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Связь с пользователем
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Связь с филиалом через пользователя
+  branch   Branch @relation(fields: [branchId], references: [id])
+  branchId Int
+
+  // Связь с номинацией
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
+  nominationId Int
+
+  // Уникальный ключ: один пользователь может иметь только одну запись в номинации
+  @@unique([userId, nominationId], name: "avr_plumber_user_nomination_unique")
+}
+
+// Лучшая бригада  АВР по канализационным сетям - 2025
+model AvrSewerTask {
+  id             Int     @id @default(autoincrement())
+  taskNumber     Int // Номер этапа (1-4)
+  time           String  @db.VarChar(5) // Время в формате мм:сс
+  timeScore      Float // Баллы за время (вычисляется)
+  hydraulicTest  Boolean // Гидравлическое испытание (+/-)
+  safetyPenalty  Float // Штраф по охране труда (0-15)
+  culturePenalty Float // Штраф за культуру (0-5)
+  qualityPenalty Float // Штраф за качество
+  stageScore     Float // Баллы за этап (вычисляется)
+
+  branchId     Int
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  nominationId Int
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
+
+  @@unique([branchId, nominationId, taskNumber], name: "avr_sewer_unique_task")
+}
+
+// Лучший слесарь АВР по канализационным сетям - 2025
+model AvrSewerPlumberTask {
+  id             Int      @id @default(autoincrement())
+  time           String   @db.VarChar(5) // Время в формате мм:сс
+  timeScore      Float // Баллы за время (50-25)
+  hydraulicTest  Boolean // Гидравлические испытания (+/-)
+  safetyPenalty  Float    @default(0) // Штраф по охране труда (0-15)
+  culturePenalty Float    @default(0) // Штраф за культуру (0-2)
+  qualityPenalty Float    @default(0) // Штраф за качество
+  stageScore     Float // Баллы за этап
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Связи
+  userId       Int
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId     Int
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  nominationId Int
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
+
+  @@unique([userId, nominationId], name: "avr_sewer_plumber_unique")
+}
+
+// "Лучший водитель автомобиля  - 2025"
+model CarDriverTask {
+  id            Int    @id @default(autoincrement())
+  // Теоретическая часть
+  theoryCorrect Int    @default(0) // Количество правильных ответов
+  theoryTime    String @db.VarChar(5) // Затраченное время (мм:сс)
+  theoryPlace   Int? // Место
+  theoryPoints  Int? // Количество очков
+
+  // Практическая часть
+  practicePenalty Int    @default(0) // Штрафные баллы за ошибки
+  practiceTime    String @db.VarChar(5) // Время прохождения дистанции
+  practiceSum     Int? // Сумма баллов (время + штраф)
+  practicePlace   Int? // Место
+  practicePoints  Int? // Количество очков
+
+  // Итоговый расчет
+  totalTheoryPoints   Int? // Очки за теорию
+  totalPracticePoints Int? // Очки за практику
+  totalPoints         Int? // Общее количество очков
+  finalPlace          Int? // Итоговое место
+
+  // Связи
+  userId       Int
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId     Int
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  nominationId Int
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
+
+  @@unique([userId, nominationId], name: "car_driver_unique")
+}
+
+// Лучший водитель автомобиля (грузового) - 2025
+model TruckDriverTask {
+  id            Int    @id @default(autoincrement())
+  // Теоретическая часть
+  theoryCorrect Int    @default(0)
+  theoryTime    String @db.VarChar(5)
+  theoryPlace   Int?
+  theoryPoints  Int?
+
+  // Практическая часть
+  practicePenalty Int    @default(0)
+  practiceTime    String @db.VarChar(5)
+  practiceSum     Int?
+  practicePlace   Int?
+  practicePoints  Int?
+
+  // Итоговый расчет
+  totalTheoryPoints   Int?
+  totalPracticePoints Int?
+  totalPoints         Int?
+  finalPlace          Int?
+
+  // Связи
+  userId       Int
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId     Int
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  nominationId Int
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
+
+  @@unique([userId, nominationId], name: "truck_driver_unique")
+}
+
+// Лучший лаборант химического анализа - 2025
+
+model ChemLabTechnician {
+  id               Int    @id @default(autoincrement())
+  // Этап 1a
+  stage1aTime      String @db.VarChar(5)
+  stage1aTimeScore Float?
+  stage1aQuality   Float  @default(0)
+  stage1aCulture   Float  @default(0)
+  stage1aSafety    Float  @default(0)
+  stage1aTotal     Float?
+
+  // Этап 1b
+  stage1bTime      String @db.VarChar(5)
+  stage1bTimeScore Float?
+  stage1bQuality   Float  @default(0)
+  stage1bCulture   Float  @default(0)
+  stage1bSafety    Float  @default(0)
+  stage1bTotal     Float?
+
+  // Этап 2
+  stage2Time      String @db.VarChar(5)
+  stage2TimeScore Float?
+  stage2Quality   Float  @default(0)
+  stage2Culture   Float  @default(0)
+  stage2Safety    Float  @default(0)
+  stage2Total     Float?
+
+  // Итоговые результаты
+  totalPoints Float?
+  finalPlace  Int?
+
+  // Связи
+  userId       Int
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId     Int
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  nominationId Int
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
+
+  @@unique([userId, nominationId], name: "chem_lab_technician_unique")
 }
