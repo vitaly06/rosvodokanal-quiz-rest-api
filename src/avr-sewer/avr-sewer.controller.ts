@@ -18,4 +18,9 @@ export class AvrSewerController {
   async updateTask(@Body() dto: UpdateAvrSewerTaskDto) {
     return this.service.updateTask(dto);
   }
+
+  @Get('result-table')
+  async getResultTable() {
+    return await this.service.getResultTable();
+  }
 }

@@ -6,6 +6,58 @@ import { UpdateChemLabTechnicianDto } from './dto/chem-lab-technician.dto';
 export class ChemLabTechnicianService {
   constructor(private prisma: PrismaService) {}
 
+  async getResultTable() {
+    let result = [];
+    const practicNomination = await this.prisma.practicNomination.findUnique({
+      where: { name: 'Лучший лаборант химического анализа' },
+    });
+
+    const nomination = await this.prisma.nomination.findUnique({
+      where: { name: 'Лаборант химического анализа' },
+    });
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        participatingNominations: {
+          has: practicNomination.id,
+        },
+      },
+      include: {
+        branch: true,
+      },
+    });
+    let theoryResults;
+    let practicResults;
+    for (const user of users) {
+      theoryResults = await this.prisma.testResult.findMany({
+        where: {
+          userId: user.id,
+          nominationId: nomination.id,
+        },
+      });
+
+      practicResults = await this.prisma.chemLabTechnician.findFirst({
+        where: { userId: user.id, nominationId: nomination.id },
+      });
+
+      result.push({
+        branchName: user.branch.address,
+        fullName: user.fullName,
+        theoryScore: theoryResults[0].score || 0,
+        practiceScore: practicResults?.totalPoints || 0,
+        totalScore:
+          (theoryResults[0].score || 0) + (practicResults?.totalPoints || 0),
+      });
+    }
+
+    result = result.sort((a, b) => b.totalScore - a.totalScore);
+    for (let i = 0; i < result.length; i++) {
+      result[i].place = i + 1;
+    }
+
+    return result;
+  }
+
   private timeToSeconds(timeStr: string): number {
     if (!timeStr) return 0;
     const [minutes, seconds] = timeStr.split(':').map(Number);

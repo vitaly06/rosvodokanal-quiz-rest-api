@@ -55,18 +55,20 @@ model Nomination {
 }
 
 model Branch {
-  id                  Int                   @id @default(autoincrement())
-  address             String                @unique
-  User                User[]
-  PracticeTask        PracticeTask[]
-  AvrMechanicTask     AvrMechanicTask[]
-  WelderTask          WelderTask[]
-  AvrPlumberTask      AvrPlumberTask[]
-  AvrSewerTask        AvrSewerTask[]
-  AvrSewerPlumberTask AvrSewerPlumberTask[]
-  CarDriverTask       CarDriverTask[]
-  TruckDriverTask     TruckDriverTask[]
-  ChemLabTechnician   ChemLabTechnician[]
+  id      Int    @id @default(autoincrement())
+  address String @unique
+
+  participatingNominations Int[] // Бригадные мероприятия, в которых участвует филиал
+  User                     User[]
+  PracticeTask             PracticeTask[]
+  AvrMechanicTask          AvrMechanicTask[]
+  WelderTask               WelderTask[]
+  AvrPlumberTask           AvrPlumberTask[]
+  AvrSewerTask             AvrSewerTask[]
+  AvrSewerPlumberTask      AvrSewerPlumberTask[]
+  CarDriverTask            CarDriverTask[]
+  TruckDriverTask          TruckDriverTask[]
+  ChemLabTechnician        ChemLabTechnician[]
 }
 
 model Question {

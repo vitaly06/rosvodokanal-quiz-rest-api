@@ -6,6 +6,86 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class AvrMechanicService {
   constructor(private prisma: PrismaService) {}
 
+  async getResultTable() {
+    let result = [];
+    // практическая номинация
+    const practicNomination = await this.prisma.practicNomination.findUnique({
+      where: { name: 'Лучшая бригада АВР на водопроводных сетях' },
+    });
+
+    // теоретическая номинация
+    const theoryNomination = await this.prisma.nomination.findUnique({
+      where: { name: 'Слесарь АВР' },
+    });
+
+    const branchs = await this.prisma.branch.findMany({
+      where: {
+        participatingNominations: {
+          has: practicNomination.id,
+        },
+      },
+    }); // ИСПРАВИТЬ!!!!
+    let practicResults;
+    let theoryResults;
+    for (const branch of branchs) {
+      practicResults = await this.prisma.avrMechanicTask.findMany({
+        where: { branchId: branch.id },
+        select: {
+          stageScore: true,
+        },
+      });
+
+      theoryResults = await this.prisma.testResult.findMany({
+        where: {
+          user: {
+            participatingNominations: {
+              has: practicNomination.id,
+            },
+            branch: {
+              address: branch.address,
+            },
+          },
+          nomination: {
+            id: theoryNomination.id,
+          },
+        },
+      });
+
+      const team = await this.prisma.user.findMany({
+        where: {
+          branch: { id: branch.id },
+          participatingNominations: {
+            has: practicNomination.id,
+          },
+        },
+      });
+
+      result.push({
+        branchName: branch.address,
+        team: team.map((elem) => elem.fullName),
+        theoryScore:
+          theoryResults.length != 0
+            ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
+            : 0,
+        practiceScore: practicResults.reduce(
+          (sum, elem) => (sum += elem.stageScore),
+          0,
+        ),
+        totalScore:
+          (theoryResults.length != 0
+            ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
+            : 0) +
+          practicResults.reduce((sum, elem) => (sum += elem.stageScore), 0),
+      });
+    }
+    result = result.sort((a, b) => b.totalScore - a.totalScore);
+    for (let i = 0; i < result.length; i++) {
+      result[i].place = i + 1;
+    }
+
+    return result;
+  }
+
   private timeToSeconds(timeStr: string): number {
     if (!timeStr) return 0;
     const [minutes, seconds] = timeStr.split(':').map(Number);

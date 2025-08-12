@@ -19,8 +19,8 @@ export class CarDriverController {
     return this.service.updateTask(dto);
   }
 
-  // @Get('calculate')
-  // async calculateResults() {
-  //   return this.service.calculateResults();
-  // }
+  @Get('result-table')
+  async getResultTable() {
+    return await this.service.getResultTable();
+  }
 }

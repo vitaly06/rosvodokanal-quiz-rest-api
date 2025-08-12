@@ -7,6 +7,51 @@ import { UpdateCarDriverTaskDto } from './dto/car-driver.dto';
 export class CarDriverService {
   constructor(private prisma: PrismaService) {}
 
+  async getResultTable() {
+    let result = [];
+    const practicNomination = await this.prisma.practicNomination.findUnique({
+      where: { name: 'Лучший водитель автомобиля (легкового)' },
+    });
+
+    const nomination = await this.prisma.nomination.findUnique({
+      where: { name: 'Водитель автомобиля (легкового)' },
+    });
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        participatingNominations: {
+          has: practicNomination.id,
+        },
+      },
+      include: {
+        branch: true,
+      },
+    });
+    for (const user of users) {
+      const results = await this.prisma.carDriverTask.findFirst({
+        where: {
+          userId: user.id,
+          nominationId: nomination.id,
+        },
+      });
+
+      result.push({
+        branchName: user.branch.address,
+        fullName: user.fullName,
+        theoryScore: results.theoryPoints || 0,
+        practiceScore: results.practicePoints || 0,
+        totalScore: results.totalPoints,
+      });
+    }
+
+    result = result.sort((a, b) => b.totalScore - a.totalScore);
+    for (let i = 0; i < result.length; i++) {
+      result[i].place = i + 1;
+    }
+
+    return result;
+  }
+
   private timeToSeconds(timeStr: string): number {
     if (!timeStr) return 0;
     const [minutes, seconds] = timeStr.split(':').map(Number);

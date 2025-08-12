@@ -19,4 +19,9 @@ export class AvrPlumberController {
   async updateTask(@Body() dto: UpdateAvrPlumberTaskDto) {
     return this.service.updateTask(dto);
   }
+
+  @Get('result-table')
+  async getResultTable() {
+    return await this.service.getResultTable();
+  }
 }

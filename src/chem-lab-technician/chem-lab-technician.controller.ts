@@ -19,8 +19,13 @@ export class ChemLabTechnicianController {
     return this.service.updateTask(dto);
   }
 
-  @Get('calculate')
-  async calculateResults() {
-    return this.service.calculateResults();
+  // @Get('calculate')
+  // async calculateResults() {
+  //   return this.service.calculateResults();
+  // }
+
+  @Get('result-table')
+  async getResultTable() {
+    return await this.service.getResultTable();
   }
 }

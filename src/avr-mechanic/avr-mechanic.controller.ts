@@ -10,12 +10,17 @@ export class AvrMechanicController {
 
   @Get('table')
   async getTable() {
-    return this.service.getTable();
+    return await this.service.getTable();
   }
 
   @Patch('upsert')
   @HttpCode(200)
   async updateTask(@Body() dto: UpdateAvrMechanicTaskDto) {
-    return this.service.updateTask(dto);
+    return await this.service.updateTask(dto);
+  }
+
+  @Get('result-table')
+  async getResultTable() {
+    return await this.service.getResultTable();
   }
 }
