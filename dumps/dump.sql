@@ -275,7 +275,8 @@ ALTER SEQUENCE public."AvrSewerTask_id_seq" OWNED BY public."AvrSewerTask".id;
 
 CREATE TABLE public."Branch" (
     id integer NOT NULL,
-    address text NOT NULL
+    address text NOT NULL,
+    "participatingNominations" integer[]
 );
 
 
@@ -6951,19 +6952,19 @@ COPY public."AvrSewerTask" (id, "taskNumber", "time", "timeScore", "hydraulicTes
 -- Data for Name: Branch; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public."Branch" (id, address) FROM stdin;
-3	Архангельск
-4	Барнаул
-5	Воронеж
-6	Краснодар
-7	Липецк
-8	Оренбург
-9	Омск
-10	Орск
-11	Томск
-12	Тюмень
-13	Тихорецк
-14	Южно-Сахалинск
+COPY public."Branch" (id, address, "participatingNominations") FROM stdin;
+11	Томск	\N
+13	Тихорецк	\N
+8	Оренбург	{1,3}
+3	Архангельск	{1,3}
+4	Барнаул	{1,3}
+5	Воронеж	{1,3}
+6	Краснодар	{1,3}
+7	Липецк	{1}
+9	Омск	{1,3}
+10	Орск	{3}
+12	Тюмень	{1,3}
+14	Южно-Сахалинск	{1}
 \.
 
 
@@ -7000,9 +7001,9 @@ COPY public."Category" (id, name, "nominationId") FROM stdin;
 COPY public."ChemLabTechnician" (id, "stage1aTime", "stage1aTimeScore", "stage1aQuality", "stage1aCulture", "stage1aSafety", "stage1aTotal", "stage1bTime", "stage1bTimeScore", "stage1bQuality", "stage1bCulture", "stage1bSafety", "stage1bTotal", "stage2Time", "stage2TimeScore", "stage2Quality", "stage2Culture", "stage2Safety", "stage2Total", "totalPoints", "finalPlace", "userId", "branchId", "nominationId") FROM stdin;
 2	09:00	40	0	0	0	40	00:00	0	0	0	0	0	00:00	0	0	0	0	0	40	1	33	3	2
 3	09:30	33	0	0	0	33	00:00	0	0	0	0	0	00:00	0	0	0	0	0	33	3	21	8	2
-6	10:00	27	0	0	0	27	00:00	0	0	5	0	0	00:00	0	0	5	5	0	27	4	76	6	2
-4	11:00	20	0	0	0	20	00:00	0	0	0	0	0	00:00	0	0	0	0	0	20	5	48	4	2
 5	09:00	40	0	0	0	40	00:00	0	0	0	0	0	00:00	0	0	0	0	0	40	2	62	5	2
+4	11:00	20	0	0	0	20	00:00	0	0	0	0	0	00:00	0	0	0	0	0	20	5	48	4	2
+6	10:00	27	0	0	0	27	00:00	0	0	5	0	0	00:00	0	0	5	5	0	27	4	76	6	2
 \.
 
 
@@ -10180,6 +10181,46 @@ COPY public."TestAnswer" (id, "testResultId", "questionId", "optionId") FROM std
 1462	111	1909	5791
 1463	111	1912	5800
 1464	111	1916	5814
+1505	114	2031	\N
+1506	114	2032	\N
+1507	114	2043	\N
+1508	114	2052	\N
+1509	114	2062	\N
+1510	114	2073	\N
+1511	114	2074	\N
+1512	114	2077	\N
+1513	114	2079	\N
+1514	114	2081	\N
+1515	114	2086	\N
+1516	114	2089	\N
+1517	114	2092	\N
+1518	114	2097	\N
+1519	114	2100	\N
+1520	114	2101	\N
+1521	114	2102	\N
+1522	114	2104	\N
+1523	114	2106	\N
+1524	114	2113	6429
+1525	115	2035	\N
+1526	115	2040	\N
+1527	115	2045	\N
+1528	115	2046	\N
+1529	115	2048	\N
+1530	115	2049	\N
+1531	115	2050	\N
+1532	115	2059	\N
+1533	115	2061	\N
+1534	115	2067	\N
+1535	115	2076	\N
+1536	115	2078	\N
+1537	115	2083	\N
+1538	115	2087	\N
+1539	115	2091	\N
+1540	115	2093	\N
+1541	115	2095	\N
+1542	115	2103	\N
+1543	115	2106	\N
+1544	115	2115	\N
 \.
 
 
@@ -10249,6 +10290,8 @@ COPY public."TestResult" (id, "userId", "nominationId", score, total, percentage
 109	105	3	11	20	55	0 мин 33 сек	2025-08-10 20:35:24.943	2025-08-10 20:35:57.706
 110	118	3	8	20	40	0 мин 33 сек	2025-08-10 20:36:13.07	2025-08-10 20:36:46.408
 111	132	3	9	20	45	0 мин 36 сек	2025-08-10 20:37:06.619	2025-08-10 20:37:42.498
+114	138	2	0	20	0	0 мин 2 сек	2025-08-12 07:21:24.754	2025-08-12 07:21:26.791
+115	138	2	0	20	0	0 мин 22 сек	2025-08-12 07:22:01.445	2025-08-12 07:22:23.413
 \.
 
 
@@ -10404,7 +10447,7 @@ COPY public."User" (id, number, "fullName", "branchId", "participatingNomination
 133	974942	Алиханов Магомед Залимханович	14	{6}
 134	886053	Медведчиков Максим Евгеньевич	14	{7}
 135	868729	Попова Галина Александровна	14	{8}
-136	454343	\N	\N	{}
+138	123456	\N	\N	{}
 \.
 
 
@@ -10531,14 +10574,14 @@ SELECT pg_catalog.setval('public."Question_id_seq"', 2116, true);
 -- Name: TestAnswer_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."TestAnswer_id_seq"', 1464, true);
+SELECT pg_catalog.setval('public."TestAnswer_id_seq"', 1544, true);
 
 
 --
 -- Name: TestResult_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."TestResult_id_seq"', 111, true);
+SELECT pg_catalog.setval('public."TestResult_id_seq"', 115, true);
 
 
 --
@@ -10552,7 +10595,7 @@ SELECT pg_catalog.setval('public."TruckDriverTask_id_seq"', 72, true);
 -- Name: User_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."User_id_seq"', 136, true);
+SELECT pg_catalog.setval('public."User_id_seq"', 138, true);
 
 
 --
