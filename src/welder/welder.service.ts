@@ -6,6 +6,62 @@ import { Injectable } from '@nestjs/common';
 export class WelderService {
   constructor(private prisma: PrismaService) {}
 
+  async getResultTable() {
+    let result = [];
+    const practicNomination = await this.prisma.practicNomination.findUnique({
+      where: { name: 'Лучший сварщик' },
+    });
+
+    const nomination = await this.prisma.nomination.findUnique({
+      where: { name: 'Сварщик' },
+    });
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        participatingNominations: {
+          has: practicNomination.id,
+        },
+      },
+      include: {
+        branch: true,
+      },
+    });
+    let theoryResults;
+    let practicResults;
+    for (const user of users) {
+      theoryResults = await this.prisma.testResult.findMany({
+        where: {
+          userId: user.id,
+          nominationId: nomination.id,
+        },
+      });
+
+      practicResults = await this.prisma.welderTask.findMany({
+        where: { userId: user.id },
+      });
+
+      result.push({
+        branchName: user.branch.address,
+        fullName: user.fullName,
+        theoryScore: theoryResults[0].score || 0,
+        practiceScore: practicResults.reduce(
+          (sum, elem) => (sum += elem.stageScore),
+          0,
+        ),
+        totalScore:
+          (theoryResults[0].score || 0) +
+          practicResults.reduce((sum, elem) => (sum += elem.stageScore), 0),
+      });
+    }
+
+    result = result.sort((a, b) => b.totalScore - a.totalScore);
+    for (let i = 0; i < result.length; i++) {
+      result[i].place = i + 1;
+    }
+
+    return result;
+  }
+
   private timeToSeconds(timeStr: string): number {
     if (!timeStr) return 0;
     const [minutes, seconds] = timeStr.split(':').map(Number);
@@ -73,87 +129,6 @@ export class WelderService {
     );
   }
 
-  // async getResultTable() {
-  //   let result = [];
-  //   // Практическая номинация
-  //   const practicNomination = await this.prisma.practicNomination.findUnique({
-  //     where: { name: 'Лучший сварщик' },
-  //   });
-
-  //   // Теоретическая номинация
-  //   const theoryNomination = await this.prisma.nomination.findUnique({
-  //     where: { name: 'Слесарь АВР' },
-  //   });
-
-  //   const users = await this.prisma.user.findMany({
-  //     where: {
-  //       participatingNominations: {
-  //         has: practicNomination.id,
-  //       },
-  //     },
-  //   }); // ИСПРАВИТЬ!!!!
-  //   let practicResults;
-  //   let theoryResults;
-  //   for (const user of users) {
-  //     practicResults = await this.prisma.welderTask.findMany({
-  //       where: { user: branch.id },
-  //       select: {
-  //         stageScore: true,
-  //       },
-  //     });
-
-  //     theoryResults = await this.prisma.testResult.findMany({
-  //       where: {
-  //         user: {
-  //           participatingNominations: {
-  //             has: practicNomination.id,
-  //           },
-  //           branch: {
-  //             address: branch.address,
-  //           },
-  //         },
-  //         nomination: {
-  //           id: theoryNomination.id,
-  //         },
-  //       },
-  //     });
-
-  //     const team = await this.prisma.user.findMany({
-  //       where: {
-  //         branch: { id: branch.id },
-  //         participatingNominations: {
-  //           has: practicNomination.id,
-  //         },
-  //       },
-  //     });
-
-  //     result.push({
-  //       branchName: branch.address,
-  //       team: team.map((elem) => elem.fullName),
-  //       theoryScore:
-  //         theoryResults.length != 0
-  //           ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
-  //           : 0,
-  //       practiceScore: practicResults.reduce(
-  //         (sum, elem) => (sum += elem.stageScore),
-  //         0,
-  //       ),
-  //       totalScore:
-  //         (theoryResults.length != 0
-  //           ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
-  //           : 0) +
-  //         practicResults.reduce((sum, elem) => (sum += elem.stageScore), 0),
-  //     });
-
-  //     result = result.sort((a, b) => b.totalScore - a.totalScore);
-  //   }
-  //   for (let i = 0; i < result.length; i++) {
-  //     result[i].place = i + 1;
-  //   }
-
-  //   return result;
-  // }
-
   async updateTask(dto: UpdateWelderTaskDto) {
     const nomination = await this.prisma.nomination.findFirst({
       where: { name: 'Сварщик' },
@@ -195,7 +170,7 @@ export class WelderService {
           branchId: dto.branchId,
           nominationId: nomination.id,
           taskNumber: dto.taskNumber,
-          participantName: dto.participantName,
+          userId: dto.userId,
         },
       },
       update: {
@@ -212,7 +187,7 @@ export class WelderService {
         branchId: dto.branchId,
         nominationId: nomination.id,
         taskNumber: dto.taskNumber,
-        participantName: dto.participantName,
+        userId: dto.userId,
         time: dto.time,
         timeScore,
         culturePenalty: dto.culturePenalty ?? 0,
@@ -243,7 +218,13 @@ export class WelderService {
       where: { nominationId: nomination.id },
     });
 
-    const branches = await this.prisma.branch.findMany();
+    const branches = await this.prisma.branch.findMany({
+      where: {
+        participatingNominations: {
+          has: practicNomination.id,
+        },
+      },
+    });
     const testResults = await this.prisma.testResult.findMany({
       where: {
         nominationId: nomination.id,
@@ -280,7 +261,7 @@ export class WelderService {
 
         return branchParticipants.map((user) => {
           const participantTasks = allTasks.filter(
-            (task) => task.participantName === user.fullName,
+            (task) => task.userId === user.id,
           );
 
           const stages = [1, 2].map((taskNumber) => {
@@ -335,6 +316,7 @@ export class WelderService {
           return {
             branchId: branch.id,
             branchName: branch.address,
+            userId: user.id,
             participantName: user.fullName || 'Неизвестный участник',
             stages,
             total,

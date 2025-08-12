@@ -19,8 +19,8 @@ export class WelderController {
     return this.service.updateTask(dto);
   }
 
-  // @Get('result-table')
-  // async getResultTable() {
-  //   return await this.service.getResultTable();
-  // }
+  @Get('result-table')
+  async getResultTable() {
+    return await this.service.getResultTable();
+  }
 }

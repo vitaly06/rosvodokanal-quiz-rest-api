@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsString, Matches } from 'class-validator';
+import { IsPositive, IsString, Matches } from 'class-validator';
 import { IsInt } from 'class-validator';
 import { IsNumber } from 'class-validator';
 import { IsOptional } from 'class-validator';
@@ -21,9 +21,11 @@ export class UpdateWelderTaskDto {
   taskNumber: number;
 
   @ApiProperty()
-  @IsString()
-  participantName: string;
-
+  @IsNumber()
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  userId: number;
   @ApiProperty({ example: '15:30' })
   @IsString()
   @Matches(/^([0-5]?\d):([0-5]?\d)$/, {

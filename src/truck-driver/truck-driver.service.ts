@@ -58,6 +58,21 @@ export class TruckDriverService {
     return minutes * 60 + seconds;
   }
 
+  async formatTimeToMMSS(timeString: string) {
+    // Извлекаем минуты и секунды из строки
+    const minutesMatch = timeString.match(/(\d+)\s*мин/);
+    const secondsMatch = timeString.match(/(\d+)\s*сек/);
+
+    const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0;
+    const seconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 0;
+
+    // Форматируем в MM:SS с ведущими нулями
+    const formattedMinutes = minutes.toString().padStart(2, '0');
+    const formattedSeconds = seconds.toString().padStart(2, '0');
+
+    return `${formattedMinutes}:${formattedSeconds}`;
+  }
+
   private secondsToTime(seconds: number): string {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -257,8 +272,8 @@ export class TruckDriverService {
 
     // 4. Save results to database
     await Promise.all(
-      combinedResults.map((res) => {
-        this.prisma.truckDriverTask.upsert({
+      combinedResults.map(async (res) => {
+        return this.prisma.truckDriverTask.upsert({
           where: {
             truck_driver_unique: {
               userId: res.userId,
@@ -267,7 +282,7 @@ export class TruckDriverService {
           },
           update: {
             theoryCorrect: res.theoryCorrect,
-            theoryTime: res.theoryTime,
+            theoryTime: await this.formatTimeToMMSS(res.theoryTime),
             theoryPlace: res.theoryPlace,
             theoryPoints: res.theoryPoints,
             practicePenalty: res.practicePenalty,
@@ -285,7 +300,7 @@ export class TruckDriverService {
             branchId: res.branchId,
             nominationId: nomination.id,
             theoryCorrect: res.theoryCorrect,
-            theoryTime: res.theoryTime,
+            theoryTime: await this.formatTimeToMMSS(res.theoryTime),
             theoryPlace: res.theoryPlace,
             theoryPoints: res.theoryPoints,
             practicePenalty: res.practicePenalty,
@@ -298,11 +313,6 @@ export class TruckDriverService {
             totalPoints: res.totalPoints,
             finalPlace: res.finalPlace,
           },
-        });
-        console.log('Saving data:', {
-          userId: res.userId,
-          theoryTime: res.theoryTime?.substring(0, 5),
-          practiceTime: res.practiceTime?.substring(0, 5),
         });
       }),
     );

@@ -33,6 +33,7 @@ model User {
   CarDriverTask            CarDriverTask[]
   TruckDriverTask          TruckDriverTask[]
   ChemLabTechnician        ChemLabTechnician[]
+  WelderTask               WelderTask[]
 }
 
 model Nomination {
@@ -172,13 +173,14 @@ model WelderTask {
   radiographicControl Float // Радиографический контроль
   stageScore          Float // Общий балл за этап
 
-  participantName String // ФИО участника
-  branchId        Int
-  branch          Branch     @relation(fields: [branchId], references: [id])
-  nominationId    Int
-  nomination      Nomination @relation(fields: [nominationId], references: [id])
+  userId       Int
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId     Int
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  nominationId Int
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
 
-  @@unique([branchId, nominationId, taskNumber, participantName], name: "welder_unique_task")
+  @@unique([branchId, nominationId, taskNumber, userId], name: "welder_unique_task")
 }
 
 // Лучший слесарь АВР по водопроводным сетям

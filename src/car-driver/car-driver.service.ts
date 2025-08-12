@@ -52,6 +52,21 @@ export class CarDriverService {
     return result;
   }
 
+  async formatTimeToMMSS(timeString: string) {
+    // Извлекаем минуты и секунды из строки
+    const minutesMatch = timeString.match(/(\d+)\s*мин/);
+    const secondsMatch = timeString.match(/(\d+)\s*сек/);
+
+    const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0;
+    const seconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 0;
+
+    // Форматируем в MM:SS с ведущими нулями
+    const formattedMinutes = minutes.toString().padStart(2, '0');
+    const formattedSeconds = seconds.toString().padStart(2, '0');
+
+    return `${formattedMinutes}:${formattedSeconds}`;
+  }
+
   private timeToSeconds(timeStr: string): number {
     if (!timeStr) return 0;
     const [minutes, seconds] = timeStr.split(':').map(Number);
@@ -199,13 +214,13 @@ export class CarDriverService {
       .filter((p) => p.CarDriverTask.length > 0)
       .map((p) => {
         const task = p.CarDriverTask[0];
+        // console.log(this.timeToSeconds(task.practiceTime));
         return {
           userId: p.id,
           practicePenalty: task.practicePenalty || 0,
           practiceTime: task.practiceTime || '00:00',
           practiceSum:
-            this.timeToSeconds(task.practiceTime || '00:00') +
-            (task.practicePenalty || 0),
+            this.timeToSeconds(task.practiceTime) + (task.practicePenalty || 0),
           user: p,
         };
       })
@@ -261,8 +276,9 @@ export class CarDriverService {
 
     // 4. Сохранение результатов в БД
     await Promise.all(
-      combinedResults.map((res) => {
-        this.prisma.carDriverTask.upsert({
+      combinedResults.map(async (res) => {
+        console.log(res);
+        return await this.prisma.carDriverTask.upsert({
           where: {
             car_driver_unique: {
               userId: res.userId,
@@ -271,7 +287,7 @@ export class CarDriverService {
           },
           update: {
             theoryCorrect: res.theoryCorrect,
-            theoryTime: res.theoryTime,
+            theoryTime: await this.formatTimeToMMSS(res.theoryTime),
             theoryPlace: res.theoryPlace,
             theoryPoints: res.theoryPoints,
             practicePenalty: res.practicePenalty,
@@ -289,7 +305,7 @@ export class CarDriverService {
             branchId: res.branchId,
             nominationId: nomination.id,
             theoryCorrect: res.theoryCorrect,
-            theoryTime: res.theoryTime,
+            theoryTime: await this.formatTimeToMMSS(res.theoryTime),
             theoryPlace: res.theoryPlace,
             theoryPoints: res.theoryPoints,
             practicePenalty: res.practicePenalty,
@@ -302,11 +318,6 @@ export class CarDriverService {
             totalPoints: res.totalPoints,
             finalPlace: res.finalPlace,
           },
-        });
-        console.log('Saving data:', {
-          userId: res.userId,
-          theoryTime: res.theoryTime?.substring(0, 5),
-          practiceTime: res.practiceTime?.substring(0, 5),
         });
       }),
     );
