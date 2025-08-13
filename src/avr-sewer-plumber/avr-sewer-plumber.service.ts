@@ -26,6 +26,7 @@ export class AvrSewerPlumberService {
         branch: true,
       },
     });
+
     let theoryResults;
     let practicResults;
     for (const user of users) {
@@ -69,33 +70,26 @@ export class AvrSewerPlumberService {
   }
 
   private calculateTimeScore(timeSeconds: number, allTimes: number[]): number {
-    if (allTimes.length === 0) return 50; // Если нет других участников - макс балл
+    if (allTimes.length === 0) return 50;
 
-    // Уникальные времена (на случай одинаковых результатов)
+    // Уникальные времена, отсортированные от лучшего к худшему
     const uniqueTimes = [...new Set(allTimes)].sort((a, b) => a - b);
     const participantCount = uniqueTimes.length;
 
-    // Диапазон баллов (50-25)
+    // Диапазон баллов
     const maxScore = 50;
     const minScore = 25;
 
-    // Находим индекс текущего времени (место участника)
+    // Находим место участника (1-based индекс)
     const place = uniqueTimes.indexOf(timeSeconds) + 1;
 
-    // Если участник всего один - даем ему максимальный балл
-    if (participantCount === 1) {
-      return maxScore;
-    }
+    // Рассчитываем шаг между участниками
+    const step = (maxScore - minScore) / participantCount;
 
-    // Если это худший результат - ставим минимальный балл
-    if (place === participantCount) {
-      return minScore;
-    }
-
-    // Для остальных рассчитываем баллы по убывающей
-    return Math.round(
-      maxScore - ((maxScore - minScore) / (participantCount - 1)) * (place - 1),
-    );
+    // Баллы уменьшаются на step для каждого следующего места
+    const score = maxScore - step * (place - 1);
+    console.log((score * 100) / 100);
+    return Math.floor(score);
   }
 
   private calculateStageScore(

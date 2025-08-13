@@ -74,40 +74,19 @@ export class WelderService {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
-  private getTimeScoreRange(taskNumber: number): { max: number; min: number } {
-    return taskNumber === 1
-      ? { max: 40, min: 20 } // Для этапа 1: 40-20 баллов
-      : { max: 70, min: 35 }; // Для этапа 2: 70-35 баллов
-  }
+  private calculateTimeScore(timeSeconds: number, taskNumber: number): number {
+    // Нормативные времена для этапов (в секундах)
+    const normTime = taskNumber === 1 ? 600 : 1200; // 10 или 20 минут
+    const baseScore = taskNumber === 1 ? 40 : 70; // Базовые баллы для этапов
 
-  private calculateTimeScore(
-    timeSeconds: number,
-    taskNumber: number,
-    allTimes: number[],
-  ): number {
-    if (allTimes.length === 0) return this.getTimeScoreRange(taskNumber).max;
+    // Разница с нормативным временем (в секундах)
+    const timeDiff = timeSeconds - normTime;
 
-    const { max: maxScore, min: minScore } = this.getTimeScoreRange(taskNumber);
-    const uniqueTimes = [...new Set(allTimes)].sort((a, b) => a - b);
-    const participantCount = uniqueTimes.length;
+    // Рассчитываем изменение баллов (каждые 30 секунд = 1 балл)
+    const scoreChange = Math.floor(timeDiff / 30);
 
-    // Находим место участника
-    const place = uniqueTimes.indexOf(timeSeconds) + 1;
-
-    // Если участник один - максимальный балл
-    if (participantCount === 1) {
-      return maxScore;
-    }
-
-    // Если худший результат - минимальный балл
-    if (place === participantCount) {
-      return minScore;
-    }
-
-    // Для остальных - расчет по формуле
-    return Math.round(
-      maxScore - ((maxScore - minScore) / (participantCount - 1)) * (place - 1),
-    );
+    // Итоговые баллы (не может быть меньше 0)
+    return Math.max(0, baseScore - scoreChange);
   }
 
   private calculateStageScore(
@@ -134,27 +113,8 @@ export class WelderService {
       where: { name: 'Сварщик' },
     });
 
-    // Получаем все времена для текущего этапа
-    const allTasks = await this.prisma.welderTask.findMany({
-      where: {
-        nominationId: nomination.id,
-        taskNumber: dto.taskNumber,
-      },
-    });
-    const allTimes = allTasks
-      .map((t) => this.timeToSeconds(t.time))
-      .filter((t) => t > 0);
-
     const timeSeconds = this.timeToSeconds(dto.time);
-    if (timeSeconds > 0) {
-      allTimes.push(timeSeconds);
-    }
-
-    const timeScore = this.calculateTimeScore(
-      timeSeconds,
-      dto.taskNumber,
-      allTimes,
-    );
+    const timeScore = this.calculateTimeScore(timeSeconds, dto.taskNumber);
     const stageScore = this.calculateStageScore(
       timeScore,
       dto.culturePenalty ?? 0,
@@ -213,18 +173,7 @@ export class WelderService {
       throw new Error('Номинация "Сварщик" не найдена');
     }
 
-    // Получаем все задачи для расчета относительных баллов
-    const allTasks = await this.prisma.welderTask.findMany({
-      where: { nominationId: nomination.id },
-    });
-
-    const branches = await this.prisma.branch.findMany({
-      where: {
-        participatingNominations: {
-          has: practicNomination.id,
-        },
-      },
-    });
+    const branches = await this.prisma.branch.findMany();
     const testResults = await this.prisma.testResult.findMany({
       where: {
         nominationId: nomination.id,
@@ -240,6 +189,12 @@ export class WelderService {
             branch: true,
           },
         },
+      },
+    });
+
+    const welderTasks = await this.prisma.welderTask.findMany({
+      where: {
+        nominationId: nomination.id,
       },
     });
 
@@ -260,51 +215,24 @@ export class WelderService {
         }
 
         return branchParticipants.map((user) => {
-          const participantTasks = allTasks.filter(
+          const participantTasks = welderTasks.filter(
             (task) => task.userId === user.id,
           );
 
           const stages = [1, 2].map((taskNumber) => {
-            // Получаем все времена для текущего этапа
-            const stageTimes = allTasks
-              .filter((t) => t.taskNumber === taskNumber)
-              .map((t) => this.timeToSeconds(t.time))
-              .filter((t) => t > 0);
-
             const task =
               participantTasks.find((t) => t.taskNumber === taskNumber) ||
               this.createEmptyStage(taskNumber);
 
-            const timeScore =
-              task.time && task.time !== '00:00'
-                ? this.calculateTimeScore(
-                    this.timeToSeconds(task.time),
-                    taskNumber,
-                    stageTimes,
-                  )
-                : 0;
-
-            const stageScore =
-              task.time && task.time !== '00:00'
-                ? this.calculateStageScore(
-                    timeScore,
-                    task.culturePenalty,
-                    task.safetyPenalty,
-                    task.operationalControl,
-                    task.visualMeasurement,
-                    task.radiographicControl,
-                  )
-                : 0;
-
             return {
               taskNumber,
               time: task.time || '00:00',
-              timeScore,
+              timeScore: task.timeScore,
               hydraulicTest: false,
               safetyPenalty: task.safetyPenalty,
               culturePenalty: task.culturePenalty,
               qualityPenalty: 0,
-              stageScore,
+              stageScore: task.stageScore,
             };
           });
 
