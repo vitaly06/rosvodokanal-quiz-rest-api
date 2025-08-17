@@ -88,24 +88,24 @@ export class WelderService {
     return Math.max(0, baseScore - scoreChange);
   }
 
-  private calculateStageScore(
-    timeScore: number,
-    culturePenalty: number,
-    safetyPenalty: number,
-    operationalControl: number,
-    visualMeasurement: number,
-    radiographicControl: number,
-  ): number {
-    return Math.max(
-      0,
-      timeScore -
-        culturePenalty -
-        safetyPenalty -
-        operationalControl -
-        visualMeasurement -
-        radiographicControl,
-    );
-  }
+  // private calculateStageScore(
+  //   timeScore: number,
+  //   culturePenalty: number,
+  //   safetyPenalty: number,
+  //   operationalControl: number,
+  //   visualMeasurement: number,
+  //   radiographicControl: number,
+  // ): number {
+  //   return Math.max(
+  //     0,
+  //     timeScore -
+  //       culturePenalty -
+  //       safetyPenalty -
+  //       operationalControl -
+  //       visualMeasurement -
+  //       radiographicControl,
+  //   );
+  // }
 
   async updateTask(dto: UpdateWelderTaskDto) {
     const nomination = await this.prisma.nomination.findFirst({
@@ -114,14 +114,6 @@ export class WelderService {
 
     const timeSeconds = this.timeToSeconds(dto.time);
     const timeScore = this.calculateTimeScore(timeSeconds, dto.taskNumber);
-    const stageScore = this.calculateStageScore(
-      timeScore,
-      dto.culturePenalty ?? 0,
-      dto.safetyPenalty ?? 0,
-      dto.operationalControl ?? 0,
-      dto.visualMeasurement ?? 0,
-      dto.radiographicControl ?? 0,
-    );
 
     return this.prisma.welderTask.upsert({
       where: {
@@ -140,7 +132,7 @@ export class WelderService {
         operationalControl: dto.operationalControl,
         visualMeasurement: dto.visualMeasurement,
         radiographicControl: dto.radiographicControl,
-        stageScore,
+        stageScore: timeScore,
       },
       create: {
         branchId: dto.branchId,
@@ -154,7 +146,7 @@ export class WelderService {
         operationalControl: dto.operationalControl ?? 0,
         visualMeasurement: dto.visualMeasurement ?? 0,
         radiographicControl: dto.radiographicControl ?? 0,
-        stageScore,
+        stageScore: timeScore,
       },
     });
   }
@@ -212,17 +204,20 @@ export class WelderService {
               total: 0,
             };
           }
-
+          // let penalty = 0;
           return branchParticipants.map(async (user) => {
             const participantTasks = welderTasks.filter(
               (task) => task.userId === user.id,
             );
-
             const stages = [1, 2].map((taskNumber) => {
               const task =
                 participantTasks.find((t) => t.taskNumber === taskNumber) ||
                 this.createEmptyStage(taskNumber);
               if (taskNumber == 1) {
+                // penalty =
+                //   (task.operationalControl || 0) +
+                //   (task.visualMeasurement || 0) +
+                //   (task.radiographicControl || 0);
                 return {
                   taskNumber,
                   time: task.time || '00:00',
@@ -258,10 +253,16 @@ export class WelderService {
               },
             });
 
-            const practiceScore = stages.reduce(
-              (sum, stage) => sum + stage.stageScore,
-              0,
-            );
+            const practiceScore =
+              stages.reduce((sum, stage) => sum + stage.stageScore, 0) -
+              stages.reduce(
+                (sum, stage) =>
+                  (sum +=
+                    (stage?.operationalControl || 0) +
+                    (stage?.visualMeasurement || 0) +
+                    (stage?.radiographicControl || 0)),
+                0,
+              );
 
             const theoryScore = await this.getTheoryScore(
               user.id,
