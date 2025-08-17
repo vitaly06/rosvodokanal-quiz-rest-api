@@ -81,10 +81,9 @@ export class WelderService {
 
     // Разница с нормативным временем (в секундах)
     const timeDiff = timeSeconds - normTime;
-
     // Рассчитываем изменение баллов (каждые 30 секунд = 1 балл)
-    const scoreChange = Math.floor(timeDiff / 30);
-
+    const scoreChange =
+      timeDiff >= 0 ? Math.floor(timeDiff / 30) : Math.ceil(timeDiff / 30);
     // Итоговые баллы (не может быть меньше 0)
     return Math.max(0, baseScore - scoreChange);
   }
@@ -197,61 +196,80 @@ export class WelderService {
         nominationId: nomination.id,
       },
     });
+    const result = await Promise.all(
+      branches
+        .map((branch) => {
+          const branchParticipants = testResults
+            .filter((result) => result.user?.branchId === branch.id)
+            .map((result) => result.user);
 
-    const result = branches
-      .map((branch) => {
-        const branchParticipants = testResults
-          .filter((result) => result.user?.branchId === branch.id)
-          .map((result) => result.user);
+          if (branchParticipants.length === 0) {
+            return {
+              branchId: branch.id,
+              branchName: branch.address,
+              participantName: 'Нет данных',
+              stages: [this.createEmptyStage(1), this.createEmptyStage(2)],
+              total: 0,
+            };
+          }
 
-        if (branchParticipants.length === 0) {
-          return {
-            branchId: branch.id,
-            branchName: branch.address,
-            participantName: 'Нет данных',
-            stages: [this.createEmptyStage(1), this.createEmptyStage(2)],
-            total: 0,
-          };
-        }
+          return branchParticipants.map(async (user) => {
+            const participantTasks = welderTasks.filter(
+              (task) => task.userId === user.id,
+            );
 
-        return branchParticipants.map((user) => {
-          const participantTasks = welderTasks.filter(
-            (task) => task.userId === user.id,
-          );
+            const stages = [1, 2].map((taskNumber) => {
+              const task =
+                participantTasks.find((t) => t.taskNumber === taskNumber) ||
+                this.createEmptyStage(taskNumber);
 
-          const stages = [1, 2].map((taskNumber) => {
-            const task =
-              participantTasks.find((t) => t.taskNumber === taskNumber) ||
-              this.createEmptyStage(taskNumber);
+              return {
+                taskNumber,
+                time: task.time || '00:00',
+                timeScore: task.timeScore,
+                hydraulicTest: false,
+                safetyPenalty: task.safetyPenalty,
+                culturePenalty: task.culturePenalty,
+                qualityPenalty: 0,
+                stageScore: task.stageScore,
+              };
+            });
+
+            const lineNumber = await this.prisma.userLineNumber.findUnique({
+              where: {
+                user_practic_line_unique: {
+                  userId: user.id,
+                  practicNominationId: practicNomination.id,
+                },
+              },
+            });
+
+            const practiceScore = stages.reduce(
+              (sum, stage) => sum + stage.stageScore,
+              0,
+            );
+
+            const theoryScore = await this.getTheoryScore(
+              user.id,
+              nomination.id,
+            );
 
             return {
-              taskNumber,
-              time: task.time || '00:00',
-              timeScore: task.timeScore,
-              hydraulicTest: false,
-              safetyPenalty: task.safetyPenalty,
-              culturePenalty: task.culturePenalty,
-              qualityPenalty: 0,
-              stageScore: task.stageScore,
+              branchId: branch.id,
+              practicNominationId: practicNomination.id,
+              lineNumber: lineNumber?.lineNumber || null,
+              branchName: branch.address,
+              userId: user.id,
+              participantName: user.fullName || 'Неизвестный участник',
+              stages,
+              theoryScore,
+              practiceScore,
+              total: theoryScore + practiceScore,
             };
           });
-
-          const total = stages.reduce(
-            (sum, stage) => sum + stage.stageScore,
-            0,
-          );
-
-          return {
-            branchId: branch.id,
-            branchName: branch.address,
-            userId: user.id,
-            participantName: user.fullName || 'Неизвестный участник',
-            stages,
-            total,
-          };
-        });
-      })
-      .flat();
+        })
+        .flat(),
+    );
 
     return result
       .sort((a, b) => b.total - a.total)
@@ -265,12 +283,23 @@ export class WelderService {
     return {
       taskNumber,
       time: '00:00',
-      timeScore: 0,
+      timeScore: taskNumber == 1 ? 40 : 70,
       hydraulicTest: false,
       safetyPenalty: 0,
       culturePenalty: 0,
       qualityPenalty: 0,
       stageScore: 0,
     };
+  }
+
+  async getTheoryScore(userId: number, nominationId: number) {
+    const theoryResults = await this.prisma.testResult.findMany({
+      where: {
+        userId,
+        nominationId,
+      },
+    });
+
+    return theoryResults[0].score || 0;
   }
 }

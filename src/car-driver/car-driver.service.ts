@@ -52,7 +52,7 @@ export class CarDriverService {
     return result;
   }
 
-  async formatTimeToMMSS(timeString: string) {
+  private formatTimeToMMSS(timeString: string) {
     // Извлекаем минуты и секунды из строки
     const minutesMatch = timeString.match(/(\d+)\s*мин/);
     const secondsMatch = timeString.match(/(\d+)\s*сек/);
@@ -67,12 +67,15 @@ export class CarDriverService {
     return `${formattedMinutes}:${formattedSeconds}`;
   }
 
-  private timeToSeconds(timeStr: string): number {
+  private timeToSeconds(timeStr: string) {
     if (!timeStr) return 0;
+    if (!timeStr.includes(':')) {
+      timeStr = this.formatTimeToMMSS(timeStr);
+    }
     const [minutes, seconds] = timeStr.split(':').map(Number);
+    console.log(`${timeStr} - ${minutes * 60 + seconds}`);
     return minutes * 60 + seconds;
   }
-
   private secondsToTime(seconds: number): string {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -327,6 +330,9 @@ export class CarDriverService {
 
   async getTable() {
     await this.calculateResults();
+    const practicNomination = await this.prisma.practicNomination.findUnique({
+      where: { name: 'Лучший водитель автомобиля (легкового)' },
+    });
 
     const nomination = await this.prisma.nomination.findFirst({
       where: { name: 'Водитель автомобиля (легкового)' },
@@ -358,9 +364,20 @@ export class CarDriverService {
     });
 
     for (const task of tasks) {
+      const lineNumber = await this.prisma.userLineNumber.findUnique({
+        where: {
+          user_practic_line_unique: {
+            userId: task.user.id,
+            practicNominationId: practicNomination.id,
+          },
+        },
+      });
+
       result.push({
         id: task.id,
+        practicNominationId: practicNomination.id,
         nominationId: task.nominationId,
+        lineNumber: lineNumber?.lineNumber || null,
         theory: {
           correct: task.theoryCorrect,
           time: task.theoryTime,

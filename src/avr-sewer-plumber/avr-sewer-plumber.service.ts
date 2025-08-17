@@ -88,7 +88,6 @@ export class AvrSewerPlumberService {
 
     // Баллы уменьшаются на step для каждого следующего места
     const score = maxScore - step * (place - 1);
-    console.log((score * 100) / 100);
     return Math.floor(score);
   }
 
@@ -227,46 +226,72 @@ export class AvrSewerPlumberService {
     const allTimes = allTasks
       .map((t) => this.timeToSeconds(t.time))
       .filter((t) => t > 0);
+    const tableData = await Promise.all(
+      participants.map(async (user) => {
+        const task = user.AvrSewerPlumberTask[0] || null;
 
-    const tableData = participants.map((user) => {
-      const task = user.AvrSewerPlumberTask[0] || null;
+        const timeScore = task
+          ? this.calculateTimeScore(this.timeToSeconds(task.time), allTimes)
+          : 0;
 
-      const timeScore = task
-        ? this.calculateTimeScore(this.timeToSeconds(task.time), allTimes)
-        : 0;
+        const practiceScore = task
+          ? this.calculateStageScore(
+              timeScore,
+              task.hydraulicTest,
+              task.safetyPenalty,
+              task.culturePenalty,
+              task.qualityPenalty,
+            )
+          : 0;
+        const theoryScore = await this.getTheoryScore(user.id, nomination.id);
 
-      const stageScore = task
-        ? this.calculateStageScore(
-            timeScore,
-            task.hydraulicTest,
-            task.safetyPenalty,
-            task.culturePenalty,
-            task.qualityPenalty,
-          )
-        : 0;
-      return {
-        branchId: user.branchId,
-        branchName: user.branch.address,
-        userId: user.id,
-        participantName: user.fullName || `Участник ${user.id}`,
-        number: user.number,
-        time: task?.time || '00:00',
-        timeScore,
-        hydraulicTest: task?.hydraulicTest || false,
-        safetyPenalty: task?.safetyPenalty || 0,
-        culturePenalty: task?.culturePenalty || 0,
-        qualityPenalty: task?.qualityPenalty || 0,
-        stageScore,
-        total: stageScore,
-      };
-    });
+        const lineNumber = await this.prisma.userLineNumber.findUnique({
+          where: {
+            user_practic_line_unique: {
+              userId: user.id,
+              practicNominationId: practicNomination.id,
+            },
+          },
+        });
+
+        return {
+          branchId: user.branchId,
+          practicNominationId: practicNomination.id,
+          lineNumber: lineNumber?.lineNumber || null,
+          branchName: user.branch.address,
+          userId: user.id,
+          participantName: user.fullName || `Участник ${user.id}`,
+          number: user.number,
+          time: task?.time || '00:00',
+          timeScore,
+          hydraulicTest: task?.hydraulicTest || false,
+          safetyPenalty: task?.safetyPenalty || 0,
+          culturePenalty: task?.culturePenalty || 0,
+          qualityPenalty: task?.qualityPenalty || 0,
+          theoryScore,
+          practiceScore,
+          total: theoryScore + practiceScore,
+        };
+      }),
+    );
 
     // Сортируем по убыванию баллов
     return tableData
-      .sort((a, b) => b.stageScore - a.stageScore)
+      .sort((a, b) => b.total - a.total)
       .map((item, index) => ({
         ...item,
         place: index + 1,
       }));
+  }
+
+  async getTheoryScore(userId: number, nominationId: number) {
+    const theoryResults = await this.prisma.testResult.findMany({
+      where: {
+        userId,
+        nominationId,
+      },
+    });
+
+    return theoryResults[0].score || 0;
   }
 }

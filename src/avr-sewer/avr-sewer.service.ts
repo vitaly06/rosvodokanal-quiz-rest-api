@@ -1,6 +1,7 @@
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateAvrSewerTaskDto } from './dto/avr-sewer-task.dto';
 import { Injectable } from '@nestjs/common';
+import { Branch } from '@prisma/client';
 
 @Injectable()
 export class AvrSewerService {
@@ -211,7 +212,7 @@ export class AvrSewerService {
     worst: number;
   } {
     const stageParams = {
-      1: { best: 50, worst: 25 }, // Этап 1: 50-25 баллов
+      1: { best: 100, worst: 50 }, // Этап 1: 100-50 баллов
       2: { best: 80, worst: 60 }, // Этап 2: 80-60 баллов
       3: { best: 100, worst: 50 }, // Этап 3: 100-50 баллов
       4: { best: 80, worst: 60 }, // Этап 4: 80-60 баллов
@@ -233,6 +234,9 @@ export class AvrSewerService {
   }
 
   async getTable() {
+    const practicNomination = await this.prisma.practicNomination.findUnique({
+      where: { name: 'Лучшая бригада АВР на канализационных сетях' },
+    });
     const nomination = await this.prisma.nomination.findFirst({
       where: { name: 'Слесарь АВР' },
     });
@@ -291,30 +295,54 @@ export class AvrSewerService {
     }
 
     // Формируем таблицу
-    const result = branches.map((branch) => {
-      const branchTasks = tasks.filter((t) => t.branchId === branch.id);
+    const result = await Promise.all(
+      branches.map(async (branch) => {
+        const branchTasks = tasks.filter((t) => t.branchId === branch.id);
 
-      // Собираем данные по всем 4 этапам
-      const stages = [1, 2, 3, 4].map((stageNum) => {
-        const stageTask =
-          branchTasks.find((t) => t.taskNumber === stageNum) ||
-          this.createEmptyStage(stageNum);
+        // Собираем данные по всем 4 этапам
+        const stages = [1, 2, 3, 4].map((stageNum) => {
+          const stageTask =
+            branchTasks.find((t) => t.taskNumber === stageNum) ||
+            this.createEmptyStage(stageNum);
+          return {
+            ...stageTask,
+            timeDisplay: stageTask.time || '00:00',
+          };
+        });
+
+        // Считаем общий балл
+        const practiceScore = stages.reduce(
+          (sum, stage) => sum + stage.stageScore,
+          0,
+        );
+
+        const theoryScore = await this.getTheoryScore(
+          branch,
+          practicNomination.id,
+          nomination.id,
+        );
+
+        const lineNumber = await this.prisma.branchLineNumber.findUnique({
+          where: {
+            branch_practic_line_unique: {
+              branchId: branch.id,
+              practicNominationId: practicNomination.id,
+            },
+          },
+        });
+
         return {
-          ...stageTask,
-          timeDisplay: stageTask.time || '00:00',
+          branchId: branch.id,
+          practicNominationId: practicNomination.id,
+          lineNumber: lineNumber?.lineNumber || null,
+          branchName: branch.address,
+          stages,
+          practiceScore,
+          theoryScore,
+          total: practiceScore + theoryScore,
         };
-      });
-
-      // Считаем общий балл
-      const total = stages.reduce((sum, stage) => sum + stage.stageScore, 0);
-
-      return {
-        branchId: branch.id,
-        branchName: branch.address,
-        stages,
-        total,
-      };
-    });
+      }),
+    );
 
     // Сортируем по убыванию общего балла
     return result
@@ -333,5 +361,30 @@ export class AvrSewerService {
       qualityPenalty: 0,
       stageScore: 0,
     };
+  }
+
+  async getTheoryScore(
+    branch: Branch,
+    practicNominationId: number,
+    theoryNominationId: number,
+  ) {
+    const theoryResults = await this.prisma.testResult.findMany({
+      where: {
+        user: {
+          participatingNominations: {
+            has: practicNominationId,
+          },
+          branch: {
+            address: branch.address,
+          },
+        },
+        nomination: {
+          id: theoryNominationId,
+        },
+      },
+    });
+    return theoryResults.length != 0
+      ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
+      : 0;
   }
 }

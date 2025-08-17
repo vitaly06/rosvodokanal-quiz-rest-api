@@ -343,12 +343,27 @@ export class ChemLabTechnicianService {
       },
     });
 
-    return participants
-      .map((participant) => {
+    const result = await Promise.all(
+      participants.map(async (participant) => {
         const task = participant.ChemLabTechnician[0] || null;
+        const theoryScore = await this.getTheoryScore(
+          participant.id,
+          nomination.id,
+        );
+
+        const lineNumber = await this.prisma.userLineNumber.findUnique({
+          where: {
+            user_practic_line_unique: {
+              userId: participant.id,
+              practicNominationId: practicNomination.id,
+            },
+          },
+        });
 
         return {
           id: task?.id || null,
+          practicNominationId: practicNomination.id,
+          lineNumber: lineNumber?.lineNumber || null,
           userId: participant.id,
           branchId: participant.branchId,
           branchName: participant.branch.address,
@@ -383,10 +398,26 @@ export class ChemLabTechnicianService {
               total: task?.stage2Total || 0,
             },
           ],
-          totalPoints: task?.totalPoints || 0,
+          theoryScore,
+          practiceScore: task?.totalPoints || 0,
+          total: theoryScore + (task?.totalPoints || 0),
           finalPlace: task?.finalPlace || null,
         };
-      })
-      .sort((a, b) => (a.finalPlace || Infinity) - (b.finalPlace || Infinity));
+      }),
+    );
+    return result.sort(
+      (a, b) => (a.finalPlace || Infinity) - (b.finalPlace || Infinity),
+    );
+  }
+
+  async getTheoryScore(userId: number, nominationId: number) {
+    const theoryResults = await this.prisma.testResult.findMany({
+      where: {
+        userId,
+        nominationId,
+      },
+    });
+
+    return theoryResults[0].score || 0;
   }
 }

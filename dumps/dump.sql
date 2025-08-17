@@ -283,6 +283,42 @@ CREATE TABLE public."Branch" (
 ALTER TABLE public."Branch" OWNER TO postgres;
 
 --
+-- Name: BranchLineNumber; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."BranchLineNumber" (
+    id integer NOT NULL,
+    "branchId" integer NOT NULL,
+    "practicNominationId" integer NOT NULL,
+    "lineNumber" integer
+);
+
+
+ALTER TABLE public."BranchLineNumber" OWNER TO postgres;
+
+--
+-- Name: BranchLineNumber_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public."BranchLineNumber_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."BranchLineNumber_id_seq" OWNER TO postgres;
+
+--
+-- Name: BranchLineNumber_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public."BranchLineNumber_id_seq" OWNED BY public."BranchLineNumber".id;
+
+
+--
 -- Name: Branch_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -732,6 +768,42 @@ CREATE TABLE public."User" (
 ALTER TABLE public."User" OWNER TO postgres;
 
 --
+-- Name: UserLineNumber; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."UserLineNumber" (
+    id integer NOT NULL,
+    "userId" integer NOT NULL,
+    "practicNominationId" integer NOT NULL,
+    "lineNumber" integer
+);
+
+
+ALTER TABLE public."UserLineNumber" OWNER TO postgres;
+
+--
+-- Name: UserLineNumber_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public."UserLineNumber_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."UserLineNumber_id_seq" OWNER TO postgres;
+
+--
+-- Name: UserLineNumber_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public."UserLineNumber_id_seq" OWNED BY public."UserLineNumber".id;
+
+
+--
 -- Name: User_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -866,6 +938,13 @@ ALTER TABLE ONLY public."Branch" ALTER COLUMN id SET DEFAULT nextval('public."Br
 
 
 --
+-- Name: BranchLineNumber id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BranchLineNumber" ALTER COLUMN id SET DEFAULT nextval('public."BranchLineNumber_id_seq"'::regclass);
+
+
+--
 -- Name: CarDriverTask id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -940,6 +1019,13 @@ ALTER TABLE ONLY public."TruckDriverTask" ALTER COLUMN id SET DEFAULT nextval('p
 --
 
 ALTER TABLE ONLY public."User" ALTER COLUMN id SET DEFAULT nextval('public."User_id_seq"'::regclass);
+
+
+--
+-- Name: UserLineNumber id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."UserLineNumber" ALTER COLUMN id SET DEFAULT nextval('public."UserLineNumber_id_seq"'::regclass);
 
 
 --
@@ -6976,20 +7062,28 @@ COPY public."Branch" (id, address, "participatingNominations") FROM stdin;
 
 
 --
+-- Data for Name: BranchLineNumber; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."BranchLineNumber" (id, "branchId", "practicNominationId", "lineNumber") FROM stdin;
+\.
+
+
+--
 -- Data for Name: CarDriverTask; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public."CarDriverTask" (id, "theoryCorrect", "theoryTime", "theoryPlace", "theoryPoints", "practicePenalty", "practiceTime", "practiceSum", "practicePlace", "practicePoints", "totalTheoryPoints", "totalPracticePoints", "totalPoints", "finalPlace", "userId", "branchId", "nominationId") FROM stdin;
 3	18	01:45	1	12	0	00:00	0	6	4	12	4	16	1	111	11	7
 10	13	02:03	8	2	0	00:00	0	1	12	2	12	14	2	46	4	7
-7	15	01:18	4	6	0	10:00	600	9	1	6	1	7	8	31	3	7
-4	16	02:07	2	9	5	10:00	605	10	0	9	0	9	5	19	8	7
-12	11	01:23	10	0	0	00:00	0	3	7	0	7	7	9	74	6	7
-6	16	01:44	3	7	0	00:00	0	8	2	7	2	9	7	133	14	7
-9	11	01:45	9	1	0	00:00	0	2	9	1	9	10	3	60	5	7
-8	15	01:39	6	4	0	00:00	0	7	3	4	3	7	10	125	12	7
-11	15	01:45	5	5	0	00:00	0	5	5	5	5	10	4	106	10	7
-5	14	01:32	7	3	0	00:00	0	4	6	3	6	9	6	96	9	7
+7	15	01:18	4	6	0	10:00	600	9	1	6	1	7	10	31	3	7
+6	16	01:44	2	9	0	00:00	0	8	2	9	2	11	3	133	14	7
+4	16	02:07	3	7	5	10:00	605	10	0	7	0	7	9	19	8	7
+11	15	01:45	6	4	0	00:00	0	5	5	4	5	9	6	106	10	7
+12	11	01:23	9	1	0	00:00	0	3	7	1	7	8	7	74	6	7
+9	11	01:45	10	0	0	00:00	0	2	9	0	9	9	4	60	5	7
+5	14	01:32	7	3	0	00:00	0	4	6	3	6	9	5	96	9	7
+8	15	01:39	5	5	0	00:00	0	7	3	5	3	8	8	125	12	7
 \.
 
 
@@ -7007,10 +7101,10 @@ COPY public."Category" (id, name, "nominationId") FROM stdin;
 
 COPY public."ChemLabTechnician" (id, "stage1aTime", "stage1aTimeScore", "stage1aQuality", "stage1aCulture", "stage1aSafety", "stage1aTotal", "stage1bTime", "stage1bTimeScore", "stage1bQuality", "stage1bCulture", "stage1bSafety", "stage1bTotal", "stage2Time", "stage2TimeScore", "stage2Quality", "stage2Culture", "stage2Safety", "stage2Total", "totalPoints", "finalPlace", "userId", "branchId", "nominationId") FROM stdin;
 2	09:00	40	0	0	0	40	00:00	0	0	0	0	0	00:00	0	0	0	0	0	40	1	33	3	2
-5	09:00	40	0	0	0	40	00:00	0	0	0	0	0	00:00	0	0	0	0	0	40	2	62	5	2
 6	10:00	27	0	0	0	27	00:00	0	0	5	0	0	00:00	0	0	5	5	0	27	4	76	6	2
-3	09:30	33	0	0	0	33	00:00	0	0	0	0	0	00:00	0	0	0	0	0	33	3	21	8	2
+5	09:00	40	0	0	0	40	00:00	0	0	0	0	0	00:00	0	0	0	0	0	40	2	62	5	2
 4	11:00	20	0	0	0	20	00:00	0	0	0	0	0	00:00	0	0	0	0	0	20	5	48	4	2
+3	09:30	33	0	0	0	33	00:00	0	0	0	0	0	00:00	0	0	0	0	0	33	3	21	8	2
 \.
 
 
@@ -10622,16 +10716,16 @@ COPY public."TestResult" (id, "userId", "nominationId", score, total, percentage
 --
 
 COPY public."TruckDriverTask" (id, "theoryCorrect", "theoryTime", "theoryPlace", "theoryPoints", "practicePenalty", "practiceTime", "practiceSum", "practicePlace", "practicePoints", "totalTheoryPoints", "totalPracticePoints", "totalPoints", "finalPlace", "userId", "branchId", "nominationId") FROM stdin;
-6	8	00:45	8	2	0	00:00	0	1	12	2	12	14	1	32	3	6
-5	8	00:44	9	1	0	00:00	0	2	9	1	9	10	4	47	4	6
-10	11	01:08	3	7	0	00:00	0	6	4	7	4	11	3	107	10	6
-11	9	01:16	7	3	0	00:00	0	3	7	3	7	10	5	61	5	6
-7	13	01:54	2	9	0	00:00	0	9	1	9	1	10	7	134	14	6
-3	10	00:52	5	5	5	03:45	230	10	0	5	0	5	9	20	8	6
-2	18	01:48	1	12	0	00:00	0	8	2	12	2	14	2	126	12	6
-9	10	01:16	6	4	0	00:00	0	4	6	4	6	10	6	75	6	6
-8	11	01:06	4	6	0	00:00	0	7	3	6	3	9	8	112	11	6
+2	18	01:48	1	12	0	00:00	0	8	2	12	2	14	1	126	12	6
+9	10	01:16	6	4	0	00:00	0	4	6	4	6	10	5	75	6	6
+11	9	01:16	7	3	0	00:00	0	3	7	3	7	10	4	61	5	6
+7	13	01:54	2	9	0	00:00	0	9	1	9	1	10	8	134	14	6
 4	5	00:52	10	0	0	00:00	0	5	5	0	5	5	10	97	9	6
+8	11	01:06	3	7	0	00:00	0	7	3	7	3	10	7	112	11	6
+3	10	00:52	5	5	5	03:45	230	10	0	5	0	5	9	20	8	6
+6	8	00:45	9	1	0	00:00	0	1	12	1	12	13	2	32	3	6
+10	11	01:08	4	6	0	00:00	0	6	4	6	4	10	6	107	10	6
+5	8	00:44	8	2	0	00:00	0	2	9	2	9	11	3	47	4	6
 \.
 
 
@@ -10774,13 +10868,21 @@ COPY public."User" (id, number, "fullName", "branchId", "participatingNomination
 
 
 --
+-- Data for Name: UserLineNumber; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."UserLineNumber" (id, "userId", "practicNominationId", "lineNumber") FROM stdin;
+\.
+
+
+--
 -- Data for Name: WelderTask; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public."WelderTask" (id, "taskNumber", "timeScore", "culturePenalty", "safetyPenalty", "operationalControl", "visualMeasurement", "radiographicControl", "stageScore", "branchId", "nominationId", "time", "userId") FROM stdin;
-21	1	40	5	2	0	0	0	33	8	3	10:00	18
-25	2	70	5	0	0	0	0	65	8	3	08:00	18
 28	1	42	0	0	0	0	0	42	3	3	09:00	26
+25	2	94	5	0	0	0	0	89	8	3	08:00	18
+21	1	42	5	2	0	0	0	35	8	3	09:00	18
 \.
 
 
@@ -10836,6 +10938,13 @@ SELECT pg_catalog.setval('public."AvrSewerTask_id_seq"', 44, true);
 
 
 --
+-- Name: BranchLineNumber_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public."BranchLineNumber_id_seq"', 1, false);
+
+
+--
 -- Name: Branch_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -10846,7 +10955,7 @@ SELECT pg_catalog.setval('public."Branch_id_seq"', 14, true);
 -- Name: CarDriverTask_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."CarDriverTask_id_seq"', 155, true);
+SELECT pg_catalog.setval('public."CarDriverTask_id_seq"', 195, true);
 
 
 --
@@ -10909,7 +11018,14 @@ SELECT pg_catalog.setval('public."TestResult_id_seq"', 130, true);
 -- Name: TruckDriverTask_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."TruckDriverTask_id_seq"', 112, true);
+SELECT pg_catalog.setval('public."TruckDriverTask_id_seq"', 342, true);
+
+
+--
+-- Name: UserLineNumber_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public."UserLineNumber_id_seq"', 1, false);
 
 
 --
@@ -10923,7 +11039,7 @@ SELECT pg_catalog.setval('public."User_id_seq"', 138, true);
 -- Name: WelderTask_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."WelderTask_id_seq"', 29, true);
+SELECT pg_catalog.setval('public."WelderTask_id_seq"', 49, true);
 
 
 --
@@ -10972,6 +11088,14 @@ ALTER TABLE ONLY public."AvrSewerPlumberTask"
 
 ALTER TABLE ONLY public."AvrSewerTask"
     ADD CONSTRAINT "AvrSewerTask_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: BranchLineNumber BranchLineNumber_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BranchLineNumber"
+    ADD CONSTRAINT "BranchLineNumber_pkey" PRIMARY KEY (id);
 
 
 --
@@ -11063,6 +11187,14 @@ ALTER TABLE ONLY public."TruckDriverTask"
 
 
 --
+-- Name: UserLineNumber UserLineNumber_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."UserLineNumber"
+    ADD CONSTRAINT "UserLineNumber_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: User User_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -11122,6 +11254,13 @@ CREATE UNIQUE INDEX "AvrSewerTask_branchId_nominationId_taskNumber_key" ON publi
 
 
 --
+-- Name: BranchLineNumber_branchId_practicNominationId_key; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX "BranchLineNumber_branchId_practicNominationId_key" ON public."BranchLineNumber" USING btree ("branchId", "practicNominationId");
+
+
+--
 -- Name: Branch_address_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -11168,6 +11307,13 @@ CREATE UNIQUE INDEX "PracticeTask_branchId_nominationId_key" ON public."Practice
 --
 
 CREATE UNIQUE INDEX "TruckDriverTask_userId_nominationId_key" ON public."TruckDriverTask" USING btree ("userId", "nominationId");
+
+
+--
+-- Name: UserLineNumber_userId_practicNominationId_key; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX "UserLineNumber_userId_practicNominationId_key" ON public."UserLineNumber" USING btree ("userId", "practicNominationId");
 
 
 --
@@ -11270,6 +11416,22 @@ ALTER TABLE ONLY public."AvrSewerTask"
 
 ALTER TABLE ONLY public."AvrSewerTask"
     ADD CONSTRAINT "AvrSewerTask_nominationId_fkey" FOREIGN KEY ("nominationId") REFERENCES public."Nomination"(id) ON UPDATE CASCADE ON DELETE RESTRICT;
+
+
+--
+-- Name: BranchLineNumber BranchLineNumber_branchId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BranchLineNumber"
+    ADD CONSTRAINT "BranchLineNumber_branchId_fkey" FOREIGN KEY ("branchId") REFERENCES public."Branch"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: BranchLineNumber BranchLineNumber_practicNominationId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BranchLineNumber"
+    ADD CONSTRAINT "BranchLineNumber_practicNominationId_fkey" FOREIGN KEY ("practicNominationId") REFERENCES public."PracticNomination"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -11422,6 +11584,22 @@ ALTER TABLE ONLY public."TruckDriverTask"
 
 ALTER TABLE ONLY public."TruckDriverTask"
     ADD CONSTRAINT "TruckDriverTask_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: UserLineNumber UserLineNumber_practicNominationId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."UserLineNumber"
+    ADD CONSTRAINT "UserLineNumber_practicNominationId_fkey" FOREIGN KEY ("practicNominationId") REFERENCES public."PracticNomination"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: UserLineNumber UserLineNumber_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."UserLineNumber"
+    ADD CONSTRAINT "UserLineNumber_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

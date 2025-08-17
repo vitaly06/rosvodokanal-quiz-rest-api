@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { UpdateAvrMechanicTaskDto } from './dto/avr-mechanic.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { Branch } from '@prisma/client';
 
 @Injectable()
 export class AvrMechanicService {
@@ -24,7 +25,7 @@ export class AvrMechanicService {
           has: practicNomination.id,
         },
       },
-    }); // ИСПРАВИТЬ!!!!
+    });
     let practicResults;
     let theoryResults;
     for (const branch of branchs) {
@@ -157,7 +158,7 @@ export class AvrMechanicService {
 
     return this.prisma.avrMechanicTask.upsert({
       where: {
-        avr_mechanic_unique_task: {
+        branchId_nominationId_taskNumber: {
           branchId: dto.branchId,
           nominationId: nomination.id,
           taskNumber: dto.taskNumber,
@@ -192,6 +193,10 @@ export class AvrMechanicService {
   }
 
   async getTable() {
+    const practicNomination = await this.prisma.practicNomination.findUnique({
+      where: { name: 'Лучшая бригада АВР на водопроводных сетях' },
+    });
+
     const branches = await this.prisma.branch.findMany();
     const nomination = await this.prisma.nomination.findFirst({
       where: { name: 'Слесарь АВР' },
@@ -238,46 +243,70 @@ export class AvrMechanicService {
       }
     }
 
-    // Формируем таблицу
-    const result = branches.map((branch) => {
-      const tasks = allTasks.filter((t) => t.branchId === branch.id);
+    // Формируем таблицу - используем Promise.all для ожидания всех асинхронных операций
+    const result = await Promise.all(
+      branches.map(async (branch) => {
+        const tasks = allTasks.filter((t) => t.branchId === branch.id);
 
-      const stages = Array(3)
-        .fill(null)
-        .map((_, i) => {
-          const task = tasks.find((t) => t.taskNumber === i + 1);
-          return (
-            task || {
-              taskNumber: i + 1,
-              time: '00:00',
-              timeScore: 0,
-              hydraulicTest: false,
-              safetyPenalty: 0,
-              culturePenalty: 0,
-              qualityPenalty: 0,
-              stageScore: 0,
-            }
-          );
+        const stages = Array(3)
+          .fill(null)
+          .map((_, i) => {
+            const task = tasks.find((t) => t.taskNumber === i + 1);
+            return (
+              task || {
+                taskNumber: i + 1,
+                time: '00:00',
+                timeScore: 0,
+                hydraulicTest: false,
+                safetyPenalty: 0,
+                culturePenalty: 0,
+                qualityPenalty: 0,
+                stageScore: 0,
+              }
+            );
+          });
+
+        const practiceScore = stages.reduce(
+          (sum, stage) => sum + stage.stageScore,
+          0,
+        );
+
+        const theoryScore = await this.getTheoryScore(
+          branch,
+          practicNomination.id,
+          nomination.id,
+        );
+
+        const lineNumber = await this.prisma.branchLineNumber.findUnique({
+          where: {
+            branch_practic_line_unique: {
+              branchId: branch.id,
+              practicNominationId: practicNomination.id,
+            },
+          },
         });
 
-      const total = stages.reduce((sum, stage) => sum + stage.stageScore, 0);
+        return {
+          branchId: branch.id,
+          practicNominationId: practicNomination.id,
+          lineNumber: lineNumber?.lineNumber || null,
+          branchName: branch.address,
+          stages: stages.map((stage) => ({
+            ...stage,
+            time: stage.time || '00:00',
+          })),
+          practiceScore,
+          theoryScore,
+          total: theoryScore + practiceScore,
+        };
+      }),
+    );
 
-      return {
-        branchId: branch.id,
-        branchName: branch.address,
-        stages: stages.map((stage) => ({
-          ...stage,
-          time: stage.time || '00:00',
-        })),
-        total,
-      };
-    });
-
+    // Сортируем результаты после того как все промисы разрешены
     return result
       .sort((a, b) => b.total - a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
   }
-
   private calculateStageScore(data: {
     timeScore: number;
     hydraulicTest: boolean;
@@ -306,5 +335,30 @@ export class AvrMechanicService {
       default:
         return [60, 30]; // По умолчанию
     }
+  }
+
+  async getTheoryScore(
+    branch: Branch,
+    practicNominationId: number,
+    theoryNominationId: number,
+  ) {
+    const theoryResults = await this.prisma.testResult.findMany({
+      where: {
+        user: {
+          participatingNominations: {
+            has: practicNominationId,
+          },
+          branch: {
+            address: branch.address,
+          },
+        },
+        nomination: {
+          id: theoryNominationId,
+        },
+      },
+    });
+    return theoryResults.length != 0
+      ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
+      : 0;
   }
 }

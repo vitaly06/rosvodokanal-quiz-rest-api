@@ -22,6 +22,8 @@ import { AvrSewerPlumberModule } from './avr-sewer-plumber/avr-sewer-plumber.mod
 import { CarDriverModule } from './car-driver/car-driver.module';
 import { TruckDriverModule } from './truck-driver/truck-driver.module';
 import { ChemLabTechnicianModule } from './chem-lab-technician/chem-lab-technician.module';
+import { BranchLineNumberModule } from './branch-line-number/branch-line-number.module';
+import { UserLineNumberModule } from './user-line-number/user-line-number.module';
 
 @Module({
   imports: [
@@ -51,6 +53,8 @@ import { ChemLabTechnicianModule } from './chem-lab-technician/chem-lab-technici
     CarDriverModule,
     TruckDriverModule,
     ChemLabTechnicianModule,
+    BranchLineNumberModule,
+    UserLineNumberModule,
   ],
   controllers: [AppController],
   providers: [],

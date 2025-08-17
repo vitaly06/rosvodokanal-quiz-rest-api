@@ -239,45 +239,72 @@ export class AvrPlumberService {
       .map((t) => this.timeToSeconds(t.time))
       .filter((t) => t > 0);
 
-    const participantsData = participants.map((user) => {
-      const task = user.AvrPlumberTask[0] || null;
+    const participantsData = await Promise.all(
+      participants.map(async (user) => {
+        const task = user.AvrPlumberTask[0] || null;
 
-      const timeScore = task
-        ? this.calculateTimeScore(this.timeToSeconds(task.time), allTimes)
-        : 0;
+        const timeScore = task
+          ? this.calculateTimeScore(this.timeToSeconds(task.time), allTimes)
+          : 0;
 
-      const stageScore = task
-        ? this.calculateStageScore({
-            timeScore,
-            hydraulicTest: task.hydraulicTest,
-            safetyPenalty: task.safetyPenalty,
-            culturePenalty: task.culturePenalty,
-            qualityPenalty: task.qualityPenalty,
-          })
-        : 0;
+        const practiceScore = task
+          ? this.calculateStageScore({
+              timeScore,
+              hydraulicTest: task.hydraulicTest,
+              safetyPenalty: task.safetyPenalty,
+              culturePenalty: task.culturePenalty,
+              qualityPenalty: task.qualityPenalty,
+            })
+          : 0;
 
-      return {
-        userId: user.id,
-        branchId: user.branchId,
-        branchName: user.branch.address,
-        participantName: user.fullName || `Участник ${user.id}`,
-        number: user.number,
-        time: task?.time || '00:00',
-        timeScore,
-        hydraulicTest: task?.hydraulicTest || false,
-        safetyPenalty: task?.safetyPenalty || 0,
-        culturePenalty: task?.culturePenalty || 0,
-        qualityPenalty: task?.qualityPenalty || 0,
-        stageScore,
-      };
-    });
+        const theoryScore = await this.getTheoryScore(user.id, nomination.id);
+        const lineNumber = await this.prisma.userLineNumber.findUnique({
+          where: {
+            user_practic_line_unique: {
+              userId: user.id,
+              practicNominationId: practicNomination.id,
+            },
+          },
+        });
+
+        return {
+          userId: user.id,
+          practicNominationId: practicNomination.id,
+          lineNumber: lineNumber?.lineNumber || null,
+          branchId: user.branchId,
+          branchName: user.branch.address,
+          participantName: user.fullName || `Участник ${user.id}`,
+          number: user.number,
+          time: task?.time || '00:00',
+          timeScore,
+          hydraulicTest: task?.hydraulicTest || false,
+          safetyPenalty: task?.safetyPenalty || 0,
+          culturePenalty: task?.culturePenalty || 0,
+          qualityPenalty: task?.qualityPenalty || 0,
+          theoryScore,
+          practiceScore,
+          total: theoryScore + practiceScore,
+        };
+      }),
+    );
 
     // Сортируем по убыванию баллов
     return participantsData
-      .sort((a, b) => b.stageScore - a.stageScore)
+      .sort((a, b) => b.total - a.total)
       .map((item, index) => ({
         ...item,
         place: index + 1,
       }));
+  }
+
+  async getTheoryScore(userId: number, nominationId: number) {
+    const theoryResults = await this.prisma.testResult.findMany({
+      where: {
+        userId,
+        nominationId,
+      },
+    });
+
+    return theoryResults[0].score || 0;
   }
 }

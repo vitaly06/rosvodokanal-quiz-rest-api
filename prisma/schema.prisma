@@ -16,8 +16,10 @@ model Admin {
 }
 
 model PracticNomination {
-  id   Int    @id @default(autoincrement())
-  name String @unique
+  id               Int                @id @default(autoincrement())
+  name             String             @unique
+  BranchLineNumber BranchLineNumber[]
+  UserLineNumber   UserLineNumber[]
 }
 
 model User {
@@ -34,6 +36,7 @@ model User {
   TruckDriverTask          TruckDriverTask[]
   ChemLabTechnician        ChemLabTechnician[]
   WelderTask               WelderTask[]
+  UserLineNumber           UserLineNumber[]
 }
 
 model Nomination {
@@ -70,6 +73,7 @@ model Branch {
   CarDriverTask            CarDriverTask[]
   TruckDriverTask          TruckDriverTask[]
   ChemLabTechnician        ChemLabTechnician[]
+  BranchLineNumber         BranchLineNumber[]
 }
 
 model Question {
@@ -140,6 +144,30 @@ model PracticeTask {
   @@unique([branchId, nominationId], name: "branch_nomination_task")
 }
 
+model BranchLineNumber {
+  id                  Int               @id @default(autoincrement())
+  branch              Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branchId            Int
+  practicNomination   PracticNomination @relation(fields: [practicNominationId], references: [id], onDelete: Cascade)
+  practicNominationId Int
+  lineNumber          Int?
+
+  // Уникальный ключ: один филиал может иметь только один номер линии в номинации
+  @@unique([branchId, practicNominationId], name: "branch_practic_line_unique")
+}
+
+model UserLineNumber {
+  id                  Int               @id @default(autoincrement())
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              Int
+  practicNomination   PracticNomination @relation(fields: [practicNominationId], references: [id], onDelete: Cascade)
+  practicNominationId Int
+  lineNumber          Int?
+
+  // Уникальный ключ: один участник может иметь только один номер линии в номинации
+  @@unique([userId, practicNominationId], name: "user_practic_line_unique")
+}
+
 // Лучшая бригада  АВР по водопроводным сетям - 2025
 model AvrMechanicTask {
   id             Int     @id @default(autoincrement())
@@ -157,7 +185,7 @@ model AvrMechanicTask {
   nominationId Int
   nomination   Nomination @relation(fields: [nominationId], references: [id])
 
-  @@unique([branchId, nominationId, taskNumber], name: "avr_mechanic_unique_task")
+  @@unique([branchId, nominationId, taskNumber], name: "branchId_nominationId_taskNumber")
 }
 
 // Сварщик
