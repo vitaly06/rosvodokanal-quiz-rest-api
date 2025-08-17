@@ -222,7 +222,21 @@ export class WelderService {
               const task =
                 participantTasks.find((t) => t.taskNumber === taskNumber) ||
                 this.createEmptyStage(taskNumber);
-
+              if (taskNumber == 1) {
+                return {
+                  taskNumber,
+                  time: task.time || '00:00',
+                  timeScore: task.timeScore,
+                  hydraulicTest: false,
+                  safetyPenalty: task.safetyPenalty,
+                  culturePenalty: task.culturePenalty,
+                  qualityPenalty: 0,
+                  stageScore: task.stageScore,
+                  operationalControl: task.operationalControl || 0, // Операционный контроль
+                  visualMeasurement: task.visualMeasurement || 0, // Визуально-измерительный контроль
+                  radiographicControl: task.radiographicControl || 0, // Радиографический контроль
+                };
+              }
               return {
                 taskNumber,
                 time: task.time || '00:00',
