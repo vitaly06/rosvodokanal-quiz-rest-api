@@ -14,88 +14,92 @@ export class AvrSewerService {
   }
 
   async getResultTable() {
-    let result = [];
-    // Практическая номинация
+    const result = [];
     const practicNomination = await this.prisma.practicNomination.findUnique({
       where: { name: 'Лучшая бригада АВР на канализационных сетях' },
     });
 
-    // Теоретическая номинация
     const theoryNomination = await this.prisma.nomination.findUnique({
       where: { name: 'Слесарь АВР' },
     });
 
-    const branchs = await this.prisma.branch.findMany({
+    const branches = await this.prisma.branch.findMany({
       where: {
         participatingNominations: { has: practicNomination.id },
       },
     });
-    let practicResults;
-    let theoryResults;
-    for (const branch of branchs) {
-      practicResults = await this.prisma.avrSewerTask.findMany({
+
+    for (const branch of branches) {
+      const practicResults = await this.prisma.avrSewerTask.findMany({
         where: { branchId: branch.id },
-        select: {
-          stageScore: true,
-        },
       });
 
-      theoryResults = await this.prisma.testResult.findMany({
+      const theoryResults = await this.prisma.testResult.findMany({
         where: {
           user: {
-            participatingNominations: {
-              has: practicNomination.id,
-            },
-            branch: {
-              address: branch.address,
-            },
+            participatingNominations: { has: practicNomination.id },
+            branch: { address: branch.address },
           },
-          nomination: {
-            id: theoryNomination.id,
-          },
+          nomination: { id: theoryNomination.id },
         },
       });
 
       const team = await this.prisma.user.findMany({
         where: {
           branch: { id: branch.id },
-          participatingNominations: {
-            has: practicNomination.id,
-          },
+          participatingNominations: { has: practicNomination.id },
         },
       });
 
+      const practiceScore = practicResults.reduce(
+        (sum, task) => sum + task.stageScore,
+        0,
+      );
+
+      const theoryScore = theoryResults.reduce(
+        (sum, result) => sum + result.score,
+        0,
+      );
+
       result.push({
         branchName: branch.address,
-        team: team.map((elem) => elem.fullName),
-        theoryScore:
-          theoryResults.length != 0
-            ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
-            : 0,
-        practiceScore: practicResults.reduce(
-          (sum, elem) => (sum += elem.stageScore),
-          0,
-        ),
-        totalScore:
-          (theoryResults.length != 0
-            ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
-            : 0) +
-          practicResults.reduce((sum, elem) => (sum += elem.stageScore), 0),
+        team: team.map((user) => user.fullName),
+        theoryScore,
+        practiceScore,
+        totalScore: theoryScore + practiceScore,
       });
-
-      result = result.sort((a, b) => b.totalScore - a.totalScore);
-    }
-    for (let i = 0; i < result.length; i++) {
-      result[i].place = i + 1;
     }
 
-    return result;
+    return result
+      .sort((a, b) => b.totalScore - a.totalScore)
+      .map((item, index) => ({ ...item, place: index + 1 }));
   }
 
-  private secondsToTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  private calculateTimeScore(
+    currentTime: string,
+    allTimes: string[],
+    maxScore: number,
+    minScore: number,
+  ): number {
+    const currentSeconds = this.timeToSeconds(currentTime);
+    const validTimes = allTimes
+      .filter((t) => t && t !== '00:00')
+      .map((t) => this.timeToSeconds(t));
+
+    if (validTimes.length === 0) return maxScore;
+
+    const bestTime = Math.min(...validTimes);
+    const worstTime = Math.max(...validTimes);
+
+    if (bestTime === worstTime) return maxScore;
+
+    return Number(
+      (
+        maxScore -
+        ((currentSeconds - bestTime) * (maxScore - minScore)) /
+          (worstTime - bestTime)
+      ).toFixed(2),
+    );
   }
 
   async updateTask(dto: UpdateAvrSewerTaskDto) {
@@ -103,8 +107,12 @@ export class AvrSewerService {
       where: { name: 'Слесарь АВР' },
     });
 
-    // Получаем все записи для текущего этапа
-    const allTasksForStage = await this.prisma.avrSewerTask.findMany({
+    const branchExists = await this.prisma.branch.findUnique({
+      where: { id: dto.branchId },
+    });
+    if (!branchExists) throw new Error('Филиал не найден');
+
+    const allTasks = await this.prisma.avrSewerTask.findMany({
       where: {
         nominationId: nomination.id,
         taskNumber: dto.taskNumber,
@@ -112,24 +120,14 @@ export class AvrSewerService {
       },
     });
 
-    // Собираем все времена (в секундах)
-    const times = allTasksForStage
-      .map((t) => this.timeToSeconds(t.time))
-      .filter((t) => t > 0);
-
-    const timeSeconds = this.timeToSeconds(dto.time);
-    if (timeSeconds > 0) {
-      times.push(timeSeconds);
-    }
-
-    // Рассчитываем баллы за время
+    const [maxScore, minScore] = this.getScoreRangeForStage(dto.taskNumber);
     const timeScore = this.calculateTimeScore(
-      timeSeconds,
-      times,
-      dto.taskNumber,
+      dto.time,
+      allTasks.map((t) => t.time),
+      maxScore,
+      minScore,
     );
 
-    // Если гидравлическое испытание не пройдено, баллы за этап = 0
     const stageScore = dto.hydraulicTest
       ? this.calculateStageScore(
           timeScore,
@@ -171,54 +169,14 @@ export class AvrSewerService {
     });
   }
 
-  private calculateTimeScore(
-    timeSeconds: number,
-    allTimes: number[],
-    taskNumber: number,
-  ): number {
-    if (allTimes.length === 0) {
-      // Если нет других участников, возвращаем максимальный балл
-      return this.getScoreRangeForStage(taskNumber).best;
-    }
-
-    const { best: maxScore, worst: minScore } =
-      this.getScoreRangeForStage(taskNumber);
-
-    // Уникальные времена (на случай одинаковых результатов)
-    const uniqueTimes = [...new Set(allTimes)].sort((a, b) => a - b);
-    const participantCount = uniqueTimes.length;
-
-    // Если участник всего один - даем ему максимальный балл
-    if (participantCount === 1) {
-      return maxScore;
-    }
-
-    // Находим индекс текущего времени (место участника)
-    const place = uniqueTimes.indexOf(timeSeconds) + 1;
-
-    // Если это худший результат - ставим минимальный балл
-    if (place === participantCount) {
-      return minScore;
-    }
-
-    // Для остальных рассчитываем баллы по убывающей
-    return Math.round(
-      maxScore - ((maxScore - minScore) / (participantCount - 1)) * (place - 1),
-    );
-  }
-
-  private getScoreRangeForStage(taskNumber: number): {
-    best: number;
-    worst: number;
-  } {
-    const stageParams = {
-      1: { best: 100, worst: 50 }, // Этап 1: 100-50 баллов
-      2: { best: 80, worst: 60 }, // Этап 2: 80-60 баллов
-      3: { best: 100, worst: 50 }, // Этап 3: 100-50 баллов
-      4: { best: 80, worst: 60 }, // Этап 4: 80-60 баллов
+  private getScoreRangeForStage(taskNumber: number): [number, number] {
+    const ranges = {
+      1: [100, 50],
+      2: [80, 60],
+      3: [100, 50],
+      4: [80, 60],
     };
-
-    return stageParams[taskNumber] || { best: 50, worst: 25 };
+    return ranges[taskNumber] || [50, 25];
   }
 
   private calculateStageScore(
@@ -241,76 +199,52 @@ export class AvrSewerService {
       where: { name: 'Слесарь АВР' },
     });
 
-    if (!nomination) {
-      throw new Error('Номинация не найдена');
-    }
-
-    const branches = await this.prisma.branch.findMany();
-    const tasks = await this.prisma.avrSewerTask.findMany({
+    const branches = await this.prisma.branch.findMany({
+      where: {
+        participatingNominations: {
+          has: practicNomination.id,
+        },
+      },
+    });
+    const allTasks = await this.prisma.avrSewerTask.findMany({
       where: { nominationId: nomination.id },
     });
 
-    // Пересчитываем баллы для всех задач по новой формуле
+    // Пересчет баллов для всех задач
     for (let stage = 1; stage <= 4; stage++) {
-      const stageTasks = tasks.filter(
+      const stageTasks = allTasks.filter(
         (t) => t.taskNumber === stage && t.time !== '00:00',
       );
 
       if (stageTasks.length > 0) {
-        const times = stageTasks.map((t) => this.timeToSeconds(t.time));
-        const { best: maxScore, worst: minScore } =
-          this.getScoreRangeForStage(stage);
+        const [maxScore, minScore] = this.getScoreRangeForStage(stage);
 
-        // Уникальные времена
-        const uniqueTimes = [...new Set(times)].sort((a, b) => a - b);
-        const participantCount = uniqueTimes.length;
-
-        for (const task of stageTasks) {
-          const timeSec = this.timeToSeconds(task.time);
-          const place = uniqueTimes.indexOf(timeSec) + 1;
-
-          // Начисляем баллы по новой формуле
-          if (participantCount === 1) {
-            // Если участник один - максимальный балл
-            task.timeScore = maxScore;
-          } else if (place === participantCount) {
-            // Если худший результат - минимальный балл
-            task.timeScore = minScore;
-          } else {
-            // Для остальных - расчет по формуле
-            task.timeScore = Math.round(
-              maxScore -
-                ((maxScore - minScore) / (participantCount - 1)) * (place - 1),
-            );
-          }
-
+        stageTasks.forEach((task) => {
+          task.timeScore = this.calculateTimeScore(
+            task.time,
+            stageTasks.map((t) => t.time),
+            maxScore,
+            minScore,
+          );
           task.stageScore = this.calculateStageScore(
             task.timeScore,
             task.safetyPenalty,
             task.culturePenalty,
             task.qualityPenalty,
           );
-        }
+        });
       }
     }
 
-    // Формируем таблицу
     const result = await Promise.all(
       branches.map(async (branch) => {
-        const branchTasks = tasks.filter((t) => t.branchId === branch.id);
+        const tasks = allTasks.filter((t) => t.branchId === branch.id);
+        const stages = [1, 2, 3, 4].map(
+          (stage) =>
+            tasks.find((t) => t.taskNumber === stage) ||
+            this.createEmptyStage(stage),
+        );
 
-        // Собираем данные по всем 4 этапам
-        const stages = [1, 2, 3, 4].map((stageNum) => {
-          const stageTask =
-            branchTasks.find((t) => t.taskNumber === stageNum) ||
-            this.createEmptyStage(stageNum);
-          return {
-            ...stageTask,
-            timeDisplay: stageTask.time || '00:00',
-          };
-        });
-
-        // Считаем общий балл
         const practiceScore = stages.reduce(
           (sum, stage) => sum + stage.stageScore,
           0,
@@ -333,9 +267,8 @@ export class AvrSewerService {
 
         return {
           branchId: branch.id,
-          practicNominationId: practicNomination.id,
-          lineNumber: lineNumber?.lineNumber || null,
           branchName: branch.address,
+          lineNumber: lineNumber?.lineNumber ?? null,
           stages,
           practiceScore,
           theoryScore,
@@ -344,13 +277,12 @@ export class AvrSewerService {
       }),
     );
 
-    // Сортируем по убыванию общего балла
     return result
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => a.branchName.localeCompare(b.branchName))
       .map((item, index) => ({ ...item, place: index + 1 }));
   }
 
-  private createEmptyStage(taskNumber: number): any {
+  private createEmptyStage(taskNumber: number) {
     return {
       taskNumber,
       time: '00:00',
@@ -368,23 +300,15 @@ export class AvrSewerService {
     practicNominationId: number,
     theoryNominationId: number,
   ) {
-    const theoryResults = await this.prisma.testResult.findMany({
+    const results = await this.prisma.testResult.findMany({
       where: {
         user: {
-          participatingNominations: {
-            has: practicNominationId,
-          },
-          branch: {
-            address: branch.address,
-          },
+          participatingNominations: { has: practicNominationId },
+          branch: { address: branch.address },
         },
-        nomination: {
-          id: theoryNominationId,
-        },
+        nomination: { id: theoryNominationId },
       },
     });
-    return theoryResults.length != 0
-      ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
-      : 0;
+    return results.reduce((sum, r) => sum + r.score, 0);
   }
 }

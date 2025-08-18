@@ -69,26 +69,34 @@ export class AvrSewerPlumberService {
     return minutes * 60 + seconds;
   }
 
-  private calculateTimeScore(timeSeconds: number, allTimes: number[]): number {
-    if (allTimes.length === 0) return 50;
+  private calculateTimeScore(
+    currentTime: string,
+    allTimes: string[],
+    maxScore: number = 50,
+    minScore: number = 25,
+  ): number {
+    const currentSeconds = this.timeToSeconds(currentTime);
+    const validTimes = allTimes
+      .filter((t) => t && t !== '00:00')
+      .map((t) => this.timeToSeconds(t));
 
-    // Уникальные времена, отсортированные от лучшего к худшему
-    const uniqueTimes = [...new Set(allTimes)].sort((a, b) => a - b);
-    const participantCount = uniqueTimes.length;
+    // Если нет других результатов, возвращаем максимальный балл
+    if (validTimes.length === 0) return maxScore;
 
-    // Диапазон баллов
-    const maxScore = 50;
-    const minScore = 25;
+    const bestTime = Math.min(...validTimes);
+    const worstTime = Math.max(...validTimes);
 
-    // Находим место участника (1-based индекс)
-    const place = uniqueTimes.indexOf(timeSeconds) + 1;
+    // Если все показали одинаковое время
+    if (bestTime === worstTime) return maxScore;
 
-    // Рассчитываем шаг между участниками
-    const step = (maxScore - minScore) / participantCount;
+    // Линейная интерполяция между лучшим и худшим временем
+    const score =
+      maxScore -
+      ((currentSeconds - bestTime) * (maxScore - minScore)) /
+        (worstTime - bestTime);
 
-    // Баллы уменьшаются на step для каждого следующего места
-    const score = maxScore - step * (place - 1);
-    return Math.floor(score);
+    // Гарантируем, что баллы в пределах диапазона
+    return Number(Math.max(minScore, Math.min(maxScore, score)).toFixed(2));
   }
 
   private calculateStageScore(
@@ -130,21 +138,17 @@ export class AvrSewerPlumberService {
       throw new Error('Номинация не найдена');
     }
 
-    const timeSeconds = this.timeToSeconds(dto.time);
-
-    // Получаем все времена для расчета баллов
+    // Получаем все существующие результаты
     const allTasks = await this.prisma.avrSewerPlumberTask.findMany({
       where: { nominationId: nomination.id },
     });
-    const allTimes = allTasks
-      .map((t) => this.timeToSeconds(t.time))
-      .filter((t) => t > 0);
 
-    if (timeSeconds > 0) {
-      allTimes.push(timeSeconds);
-    }
+    // Рассчитываем баллы за время
+    const timeScore = this.calculateTimeScore(
+      dto.time,
+      allTasks.map((t) => t.time),
+    );
 
-    const timeScore = this.calculateTimeScore(timeSeconds, allTimes);
     const stageScore = this.calculateStageScore(
       timeScore,
       dto.hydraulicTest,
@@ -198,6 +202,7 @@ export class AvrSewerPlumberService {
       throw new Error('Номинация не найдена');
     }
 
+    // Получаем всех участников с их результатами
     const participants = await this.prisma.user.findMany({
       where: {
         TestResult: {
@@ -219,19 +224,22 @@ export class AvrSewerPlumberService {
       },
     });
 
-    // Получаем все времена для расчета баллов
-    const allTasks = await this.prisma.avrSewerPlumberTask.findMany({
-      where: { nominationId: nomination.id },
-    });
-    const allTimes = allTasks
-      .map((t) => this.timeToSeconds(t.time))
-      .filter((t) => t > 0);
+    // Получаем все времена для расчета относительных баллов
+    const allTimes = (
+      await this.prisma.avrSewerPlumberTask.findMany({
+        where: { nominationId: nomination.id },
+      })
+    )
+      .map((t) => t.time)
+      .filter((t) => t && t !== '00:00');
+
     const tableData = await Promise.all(
       participants.map(async (user) => {
         const task = user.AvrSewerPlumberTask[0] || null;
 
+        // Рассчитываем баллы за время
         const timeScore = task
-          ? this.calculateTimeScore(this.timeToSeconds(task.time), allTimes)
+          ? this.calculateTimeScore(task.time, allTimes)
           : 0;
 
         const practiceScore = task
@@ -243,6 +251,7 @@ export class AvrSewerPlumberService {
               task.qualityPenalty,
             )
           : 0;
+
         const theoryScore = await this.getTheoryScore(user.id, nomination.id);
 
         const lineNumber = await this.prisma.userLineNumber.findUnique({
@@ -257,7 +266,7 @@ export class AvrSewerPlumberService {
         return {
           branchId: user.branchId,
           practicNominationId: practicNomination.id,
-          lineNumber: lineNumber?.lineNumber || null,
+          lineNumber: lineNumber?.lineNumber ?? null,
           branchName: user.branch.address,
           userId: user.id,
           participantName: user.fullName || `Участник ${user.id}`,
@@ -275,13 +284,9 @@ export class AvrSewerPlumberService {
       }),
     );
 
-    // Сортируем по убыванию баллов
     return tableData
-      .sort((a, b) => b.total - a.total)
-      .map((item, index) => ({
-        ...item,
-        place: index + 1,
-      }));
+      .sort((a, b) => a.participantName.localeCompare(b.participantName))
+      .map((item, index) => ({ ...item, place: index + 1 }));
   }
 
   async getTheoryScore(userId: number, nominationId: number) {

@@ -409,6 +409,8 @@ export class TruckDriverService {
       });
     }
 
-    return result;
+    return result
+      .sort((a, b) => a.user.fullName.localeCompare(b.user.fullName))
+      .map((item, index) => ({ ...item, place: index + 1 }));
   }
 }

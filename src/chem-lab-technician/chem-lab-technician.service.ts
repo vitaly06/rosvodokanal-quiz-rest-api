@@ -6,58 +6,6 @@ import { UpdateChemLabTechnicianDto } from './dto/chem-lab-technician.dto';
 export class ChemLabTechnicianService {
   constructor(private prisma: PrismaService) {}
 
-  async getResultTable() {
-    let result = [];
-    const practicNomination = await this.prisma.practicNomination.findUnique({
-      where: { name: 'Лучший лаборант химического анализа' },
-    });
-
-    const nomination = await this.prisma.nomination.findUnique({
-      where: { name: 'Лаборант химического анализа' },
-    });
-
-    const users = await this.prisma.user.findMany({
-      where: {
-        participatingNominations: {
-          has: practicNomination.id,
-        },
-      },
-      include: {
-        branch: true,
-      },
-    });
-    let theoryResults;
-    let practicResults;
-    for (const user of users) {
-      theoryResults = await this.prisma.testResult.findMany({
-        where: {
-          userId: user.id,
-          nominationId: nomination.id,
-        },
-      });
-
-      practicResults = await this.prisma.chemLabTechnician.findFirst({
-        where: { userId: user.id, nominationId: nomination.id },
-      });
-
-      result.push({
-        branchName: user.branch.address,
-        fullName: user.fullName,
-        theoryScore: theoryResults[0].score || 0,
-        practiceScore: practicResults?.totalPoints || 0,
-        totalScore:
-          (theoryResults[0].score || 0) + (practicResults?.totalPoints || 0),
-      });
-    }
-
-    result = result.sort((a, b) => b.totalScore - a.totalScore);
-    for (let i = 0; i < result.length; i++) {
-      result[i].place = i + 1;
-    }
-
-    return result;
-  }
-
   private timeToSeconds(timeStr: string): number {
     if (!timeStr) return 0;
     const [minutes, seconds] = timeStr.split(':').map(Number);
@@ -65,38 +13,42 @@ export class ChemLabTechnicianService {
   }
 
   private calculateTimeScore(
-    timeSeconds: number,
-    allTimes: number[],
+    currentTime: string,
+    allTimes: string[],
     maxScore: number,
     minScore: number,
   ): number {
-    if (allTimes.length === 0) return maxScore;
+    const currentSeconds = this.timeToSeconds(currentTime);
+    const validTimes = allTimes
+      .filter((t) => t && t !== '00:00')
+      .map((t) => this.timeToSeconds(t));
 
-    // Уникальные времена (на случай одинаковых результатов)
-    const uniqueTimes = [...new Set(allTimes)].sort((a, b) => a - b);
-    const participantCount = uniqueTimes.length;
+    if (validTimes.length === 0) return maxScore;
 
-    // Находим индекс текущего времени (место участника)
-    const place = uniqueTimes.indexOf(timeSeconds) + 1;
+    const bestTime = Math.min(...validTimes);
+    const worstTime = Math.max(...validTimes);
 
-    // Если участник всего один - даем ему максимальный балл
-    if (participantCount === 1) {
-      return maxScore;
-    }
+    if (bestTime === worstTime) return maxScore;
 
-    // Если это худший результат - ставим минимальный балл
-    if (place === participantCount) {
-      return minScore;
-    }
+    // Линейная интерполяция между лучшим и худшим временем
+    const score =
+      maxScore -
+      ((currentSeconds - bestTime) * (maxScore - minScore)) /
+        (worstTime - bestTime);
 
-    // Для остальных рассчитываем баллы по убывающей
-    return Math.round(
-      maxScore - ((maxScore - minScore) / (participantCount - 1)) * (place - 1),
-    );
+    return Number(Math.max(minScore, Math.min(maxScore, score)).toFixed(2));
+  }
+
+  private calculateStageScore(
+    timeScore: number,
+    quality: number,
+    culture: number,
+    safety: number,
+  ): number {
+    return Math.max(0, timeScore - quality - culture - safety);
   }
 
   async updateTask(dto: UpdateChemLabTechnicianDto) {
-    console.log(`dto: ${dto.stage1aTime}`);
     const nomination = await this.prisma.nomination.findFirst({
       where: { name: 'Лаборант химического анализа' },
     });
@@ -193,73 +145,55 @@ export class ChemLabTechnicianService {
     // Собираем времена для каждого этапа
     const stage1aTimes = tasks
       .filter((t) => t.stage1aTime !== '00:00')
-      .map((t) => this.timeToSeconds(t.stage1aTime));
+      .map((t) => t.stage1aTime);
 
     const stage1bTimes = tasks
       .filter((t) => t.stage1bTime !== '00:00')
-      .map((t) => this.timeToSeconds(t.stage1bTime));
+      .map((t) => t.stage1bTime);
 
     const stage2Times = tasks
       .filter((t) => t.stage2Time !== '00:00')
-      .map((t) => this.timeToSeconds(t.stage2Time));
+      .map((t) => t.stage2Time);
 
     // Рассчитываем результаты для каждого участника
     const results = tasks.map((task) => {
       // Этап 1a
       const stage1aTimeScore =
         task.stage1aTime !== '00:00'
-          ? this.calculateTimeScore(
-              this.timeToSeconds(task.stage1aTime),
-              stage1aTimes,
-              40, // Максимальный балл
-              20, // Минимальный балл
-            )
+          ? this.calculateTimeScore(task.stage1aTime, stage1aTimes, 40, 20)
           : 0;
 
-      const stage1aTotal = Math.max(
-        0,
-        stage1aTimeScore -
-          task.stage1aQuality -
-          task.stage1aCulture -
-          task.stage1aSafety,
+      const stage1aTotal = this.calculateStageScore(
+        stage1aTimeScore,
+        task.stage1aQuality,
+        task.stage1aCulture,
+        task.stage1aSafety,
       );
 
       // Этап 1b
       const stage1bTimeScore =
         task.stage1bTime !== '00:00'
-          ? this.calculateTimeScore(
-              this.timeToSeconds(task.stage1bTime),
-              stage1bTimes,
-              60, // Максимальный балл
-              40, // Минимальный балл
-            )
+          ? this.calculateTimeScore(task.stage1bTime, stage1bTimes, 60, 40)
           : 0;
 
-      const stage1bTotal = Math.max(
-        0,
-        stage1bTimeScore -
-          task.stage1bQuality -
-          task.stage1bCulture -
-          task.stage1bSafety,
+      const stage1bTotal = this.calculateStageScore(
+        stage1bTimeScore,
+        task.stage1bQuality,
+        task.stage1bCulture,
+        task.stage1bSafety,
       );
 
       // Этап 2
       const stage2TimeScore =
         task.stage2Time !== '00:00'
-          ? this.calculateTimeScore(
-              this.timeToSeconds(task.stage2Time),
-              stage2Times,
-              100, // Максимальный балл
-              60, // Минимальный балл
-            )
+          ? this.calculateTimeScore(task.stage2Time, stage2Times, 100, 60)
           : 0;
 
-      const stage2Total = Math.max(
-        0,
-        stage2TimeScore -
-          task.stage2Quality -
-          task.stage2Culture -
-          task.stage2Safety,
+      const stage2Total = this.calculateStageScore(
+        stage2TimeScore,
+        task.stage2Quality,
+        task.stage2Culture,
+        task.stage2Safety,
       );
 
       // Итоговый балл
@@ -363,7 +297,7 @@ export class ChemLabTechnicianService {
         return {
           id: task?.id || null,
           practicNominationId: practicNomination.id,
-          lineNumber: lineNumber?.lineNumber || null,
+          lineNumber: lineNumber?.lineNumber ?? null,
           userId: participant.id,
           branchId: participant.branchId,
           branchName: participant.branch.address,
@@ -405,19 +339,58 @@ export class ChemLabTechnicianService {
         };
       }),
     );
-    return result.sort(
-      (a, b) => (a.finalPlace || Infinity) - (b.finalPlace || Infinity),
+
+    return result
+      .sort((a, b) => a.participantName.localeCompare(b.participantName))
+      .map((item, index) => ({ ...item, place: index + 1 }));
+  }
+
+  async getResultTable() {
+    const practicNomination = await this.prisma.practicNomination.findUnique({
+      where: { name: 'Лучший лаборант химического анализа' },
+    });
+
+    const nomination = await this.prisma.nomination.findUnique({
+      where: { name: 'Лаборант химического анализа' },
+    });
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        participatingNominations: { has: practicNomination.id },
+      },
+      include: { branch: true },
+    });
+
+    const result = await Promise.all(
+      users.map(async (user) => {
+        const theoryResults = await this.prisma.testResult.findMany({
+          where: { userId: user.id, nominationId: nomination.id },
+        });
+
+        const practicResults = await this.prisma.chemLabTechnician.findFirst({
+          where: { userId: user.id, nominationId: nomination.id },
+        });
+
+        return {
+          branchName: user.branch.address,
+          fullName: user.fullName,
+          theoryScore: theoryResults[0]?.score || 0,
+          practiceScore: practicResults?.totalPoints || 0,
+          totalScore:
+            (theoryResults[0]?.score || 0) + (practicResults?.totalPoints || 0),
+        };
+      }),
     );
+
+    return result
+      .sort((a, b) => b.totalScore - a.totalScore)
+      .map((item, index) => ({ ...item, place: index + 1 }));
   }
 
   async getTheoryScore(userId: number, nominationId: number) {
     const theoryResults = await this.prisma.testResult.findMany({
-      where: {
-        userId,
-        nominationId,
-      },
+      where: { userId, nominationId },
     });
-
-    return theoryResults[0].score || 0;
+    return theoryResults[0]?.score || 0;
   }
 }

@@ -6,102 +6,37 @@ import { UpdateAvrPlumberTaskDto } from './dto/avr-plumber.dto';
 export class AvrPlumberService {
   constructor(private prisma: PrismaService) {}
 
-  async getResultTable() {
-    let result = [];
-    const practicNomination = await this.prisma.practicNomination.findUnique({
-      where: { name: 'Лучший слесарь АВР на водопроводных сетях' },
-    });
-
-    const nomination = await this.prisma.nomination.findUnique({
-      where: { name: 'Слесарь АВР' },
-    });
-
-    const users = await this.prisma.user.findMany({
-      where: {
-        participatingNominations: {
-          has: practicNomination.id,
-        },
-      },
-      include: {
-        branch: true,
-      },
-    });
-    let theoryResults;
-    let practicResults;
-    for (const user of users) {
-      theoryResults = await this.prisma.testResult.findMany({
-        where: {
-          userId: user.id,
-          nominationId: nomination.id,
-        },
-      });
-
-      practicResults = await this.prisma.avrPlumberTask.findMany({
-        where: { userId: user.id },
-      });
-
-      result.push({
-        branchName: user.branch.address,
-        fullName: user.fullName,
-        theoryScore: theoryResults[0].score || 0,
-        practiceScore: practicResults.reduce(
-          (sum, elem) => (sum += elem.stageScore),
-          0,
-        ),
-        totalScore:
-          (theoryResults[0].score || 0) +
-          practicResults.reduce((sum, elem) => (sum += elem.stageScore), 0),
-      });
-    }
-
-    result = result.sort((a, b) => b.totalScore - a.totalScore);
-    for (let i = 0; i < result.length; i++) {
-      result[i].place = i + 1;
-    }
-
-    return result;
-  }
-
   private timeToSeconds(timeStr: string): number {
     if (!timeStr) return 0;
     const [minutes, seconds] = timeStr.split(':').map(Number);
     return minutes * 60 + seconds;
   }
 
-  private secondsToTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
+  private calculateTimeScore(
+    currentTime: string,
+    allTimes: string[],
+    maxScore: number = 50,
+    minScore: number = 25,
+  ): number {
+    const currentSeconds = this.timeToSeconds(currentTime);
+    const validTimes = allTimes
+      .filter((t) => t && t !== '00:00')
+      .map((t) => this.timeToSeconds(t));
 
-  private calculateTimeScore(timeSeconds: number, allTimes: number[]): number {
-    if (allTimes.length === 0) return 50; // Если нет других участников - макс балл
+    if (validTimes.length === 0) return maxScore;
 
-    // Уникальные времена (на случай одинаковых результатов)
-    const uniqueTimes = [...new Set(allTimes)].sort((a, b) => a - b);
-    const participantCount = uniqueTimes.length;
+    const bestTime = Math.min(...validTimes);
+    const worstTime = Math.max(...validTimes);
 
-    // Диапазон баллов (50-25)
-    const maxScore = 50;
-    const minScore = 25;
+    if (bestTime === worstTime) return maxScore;
 
-    // Находим индекс текущего времени (место участника)
-    const place = uniqueTimes.indexOf(timeSeconds) + 1;
+    // Линейная интерполяция между лучшим и худшим временем
+    const score =
+      maxScore -
+      ((currentSeconds - bestTime) * (maxScore - minScore)) /
+        (worstTime - bestTime);
 
-    // Если участник всего один - даем ему максимальный балл
-    if (participantCount === 1) {
-      return maxScore;
-    }
-
-    // Если это худший результат - ставим минимальный балл
-    if (place === participantCount) {
-      return minScore;
-    }
-
-    // Для остальных рассчитываем баллы по убывающей
-    return Math.round(
-      maxScore - ((maxScore - minScore) / (participantCount - 1)) * (place - 1),
-    );
+    return Number(Math.max(minScore, Math.min(maxScore, score)).toFixed(2));
   }
 
   private calculateStageScore(data: {
@@ -142,21 +77,17 @@ export class AvrPlumberService {
       where: { name: 'Слесарь АВР' },
     });
 
-    const timeSeconds = this.timeToSeconds(dto.time);
-
-    // Получаем все времена для расчета баллов
+    // Получаем все существующие результаты
     const allTasks = await this.prisma.avrPlumberTask.findMany({
       where: { nominationId: nomination.id },
     });
-    const allTimes = allTasks
-      .map((t) => this.timeToSeconds(t.time))
-      .filter((t) => t > 0);
 
-    if (timeSeconds > 0) {
-      allTimes.push(timeSeconds);
-    }
+    // Рассчитываем баллы за время
+    const timeScore = this.calculateTimeScore(
+      dto.time,
+      allTasks.map((t) => t.time),
+    );
 
-    const timeScore = this.calculateTimeScore(timeSeconds, allTimes);
     const stageScore = this.calculateStageScore({
       timeScore,
       hydraulicTest: dto.hydraulicTest ?? false,
@@ -176,9 +107,9 @@ export class AvrPlumberService {
         time: dto.time,
         timeScore,
         hydraulicTest: dto.hydraulicTest,
-        safetyPenalty: dto.safetyPenalty,
-        culturePenalty: dto.culturePenalty,
-        qualityPenalty: dto.qualityPenalty,
+        safetyPenalty: dto.safetyPenalty ?? 0,
+        culturePenalty: dto.culturePenalty ?? 0,
+        qualityPenalty: dto.qualityPenalty ?? 0,
         stageScore,
         updatedAt: new Date(),
       },
@@ -210,6 +141,7 @@ export class AvrPlumberService {
       throw new Error('Номинация не найдена');
     }
 
+    // Получаем всех участников с их результатами
     const participants = await this.prisma.user.findMany({
       where: {
         TestResult: {
@@ -231,20 +163,22 @@ export class AvrPlumberService {
       },
     });
 
-    // Получаем все времена для расчета баллов
-    const allTasks = await this.prisma.avrPlumberTask.findMany({
-      where: { nominationId: nomination.id },
-    });
-    const allTimes = allTasks
-      .map((t) => this.timeToSeconds(t.time))
-      .filter((t) => t > 0);
+    // Получаем все времена для расчета относительных баллов
+    const allTimes = (
+      await this.prisma.avrPlumberTask.findMany({
+        where: { nominationId: nomination.id },
+      })
+    )
+      .map((t) => t.time)
+      .filter((t) => t && t !== '00:00');
 
-    const participantsData = await Promise.all(
+    const tableData = await Promise.all(
       participants.map(async (user) => {
         const task = user.AvrPlumberTask[0] || null;
 
+        // Рассчитываем баллы за время
         const timeScore = task
-          ? this.calculateTimeScore(this.timeToSeconds(task.time), allTimes)
+          ? this.calculateTimeScore(task.time, allTimes)
           : 0;
 
         const practiceScore = task
@@ -258,6 +192,7 @@ export class AvrPlumberService {
           : 0;
 
         const theoryScore = await this.getTheoryScore(user.id, nomination.id);
+
         const lineNumber = await this.prisma.userLineNumber.findUnique({
           where: {
             user_practic_line_unique: {
@@ -270,7 +205,7 @@ export class AvrPlumberService {
         return {
           userId: user.id,
           practicNominationId: practicNomination.id,
-          lineNumber: lineNumber?.lineNumber || null,
+          lineNumber: lineNumber?.lineNumber ?? null,
           branchId: user.branchId,
           branchName: user.branch.address,
           participantName: user.fullName || `Участник ${user.id}`,
@@ -288,23 +223,62 @@ export class AvrPlumberService {
       }),
     );
 
-    // Сортируем по убыванию баллов
-    return participantsData
-      .sort((a, b) => b.total - a.total)
-      .map((item, index) => ({
-        ...item,
-        place: index + 1,
-      }));
+    // Сортируем по убыванию общего балла
+    return tableData
+      .sort((a, b) => a.participantName.localeCompare(b.participantName))
+      .map((item, index) => ({ ...item, place: index + 1 }));
+  }
+
+  async getResultTable() {
+    const practicNomination = await this.prisma.practicNomination.findUnique({
+      where: { name: 'Лучший слесарь АВР на водопроводных сетях' },
+    });
+
+    const nomination = await this.prisma.nomination.findUnique({
+      where: { name: 'Слесарь АВР' },
+    });
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        participatingNominations: { has: practicNomination.id },
+      },
+      include: { branch: true },
+    });
+
+    const result = await Promise.all(
+      users.map(async (user) => {
+        const theoryResults = await this.prisma.testResult.findMany({
+          where: { userId: user.id, nominationId: nomination.id },
+        });
+
+        const practicResults = await this.prisma.avrPlumberTask.findMany({
+          where: { userId: user.id },
+        });
+
+        return {
+          branchName: user.branch.address,
+          fullName: user.fullName,
+          theoryScore: theoryResults[0]?.score || 0,
+          practiceScore: practicResults.reduce(
+            (sum, elem) => sum + elem.stageScore,
+            0,
+          ),
+          totalScore:
+            (theoryResults[0]?.score || 0) +
+            practicResults.reduce((sum, elem) => sum + elem.stageScore, 0),
+        };
+      }),
+    );
+
+    return result
+      .sort((a, b) => b.totalScore - a.totalScore)
+      .map((item, index) => ({ ...item, place: index + 1 }));
   }
 
   async getTheoryScore(userId: number, nominationId: number) {
     const theoryResults = await this.prisma.testResult.findMany({
-      where: {
-        userId,
-        nominationId,
-      },
+      where: { userId, nominationId },
     });
-
-    return theoryResults[0].score || 0;
+    return theoryResults[0]?.score || 0;
   }
 }

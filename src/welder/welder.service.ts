@@ -164,7 +164,13 @@ export class WelderService {
       throw new Error('Номинация "Сварщик" не найдена');
     }
 
-    const branches = await this.prisma.branch.findMany();
+    const branches = await this.prisma.branch.findMany({
+      where: {
+        participatingNominations: {
+          has: practicNomination.id,
+        },
+      },
+    });
     const testResults = await this.prisma.testResult.findMany({
       where: {
         nominationId: nomination.id,
@@ -287,11 +293,8 @@ export class WelderService {
     );
 
     return result
-      .sort((a, b) => b.total - a.total)
-      .map((item, index) => ({
-        ...item,
-        place: index + 1,
-      }));
+      .sort((a, b) => a.participantName.localeCompare(b.participantName))
+      .map((item, index) => ({ ...item, place: index + 1 }));
   }
 
   private createEmptyStage(taskNumber: number): any {
@@ -303,7 +306,7 @@ export class WelderService {
       safetyPenalty: 0,
       culturePenalty: 0,
       qualityPenalty: 0,
-      stageScore: 0,
+      stageScore: taskNumber == 1 ? 40 : 70,
     };
   }
 

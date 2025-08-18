@@ -103,7 +103,14 @@ export class AvrMechanicService {
       throw new Error('Номинация не найдена');
     }
 
-    const timeSeconds = this.timeToSeconds(dto.time);
+    // Проверяем существует ли branch
+    const branchExists = await this.prisma.branch.findUnique({
+      where: { id: dto.branchId },
+    });
+
+    if (!branchExists) {
+      throw new Error('Филиал не найден');
+    }
 
     // Получаем все записи для текущего этапа
     const allTasksForStage = await this.prisma.avrMechanicTask.findMany({
@@ -114,40 +121,38 @@ export class AvrMechanicService {
       },
     });
 
-    // Собираем все времена (в секундах)
-    const times = allTasksForStage
-      .map((t) => this.timeToSeconds(t.time))
-      .filter((t) => t > 0);
+    // Добавляем текущее время (если оно валидное)
+    const validTimes = allTasksForStage
+      .map((t) => t.time)
+      .filter((time) => time && time !== '00:00');
 
-    if (timeSeconds > 0) {
-      times.push(timeSeconds);
+    if (dto.time && dto.time !== '00:00') {
+      validTimes.push(dto.time);
     }
 
-    // Устанавливаем значение по умолчанию 0, если нет данных для расчета
-    let timeScore = 0;
-    if (times.length > 0 && timeSeconds > 0) {
-      // Добавили проверку timeSeconds > 0
+    // Если нет валидных времен, используем минимальный балл
+    let timeScore = this.getScoreRangeForStage(dto.taskNumber)[1]; // minScore
+
+    if (validTimes.length > 0) {
       const [maxScore, minScore] = this.getScoreRangeForStage(dto.taskNumber);
-      const sortedTimes = [...times].sort((a, b) => a - b);
-      const currentIndex = sortedTimes.indexOf(timeSeconds);
-      const step = (maxScore - minScore) / Math.max(1, times.length - 1); // Защита от деления на 0
-      timeScore = Math.round(maxScore - currentIndex * step);
+
+      const sortedTimes = [...validTimes].sort(
+        (a, b) => this.timeToSeconds(a) - this.timeToSeconds(b),
+      );
+
+      const bestTime = sortedTimes[0];
+      const worstTime = sortedTimes[sortedTimes.length - 1];
+
+      if (dto.time && dto.time !== '00:00') {
+        timeScore = this.calculateTimeScore(
+          dto.time,
+          bestTime,
+          worstTime,
+          maxScore,
+          minScore,
+        );
+      }
     }
-
-    // Проверяем существует ли branch
-    const branchExists = await this.prisma.branch.findUnique({
-      where: { id: dto.branchId },
-    });
-
-    if (!branchExists) {
-      throw new Error('Филиал не найден');
-    }
-
-    // Убедимся, что timeScore является числом
-    if (isNaN(timeScore)) {
-      timeScore = 0;
-    }
-
     const stageScore = this.calculateStageScore({
       timeScore,
       hydraulicTest: dto.hydraulicTest ?? false,
@@ -197,7 +202,13 @@ export class AvrMechanicService {
       where: { name: 'Лучшая бригада АВР на водопроводных сетях' },
     });
 
-    const branches = await this.prisma.branch.findMany();
+    const branches = await this.prisma.branch.findMany({
+      where: {
+        participatingNominations: {
+          has: practicNomination.id,
+        },
+      },
+    });
     const nomination = await this.prisma.nomination.findFirst({
       where: { name: 'Слесарь АВР' },
       select: { id: true },
@@ -223,13 +234,11 @@ export class AvrMechanicService {
 
         // Рассчитываем баллы
         sortedTasks.forEach((task, index) => {
-          // Если это последний участник (худшее время) - ставим минимальный балл
           if (index === sortedTasks.length - 1) {
             task.timeScore = minScore;
           } else {
-            // Для остальных рассчитываем баллы по убывающей
             const step = (maxScore - minScore) / (sortedTasks.length - 1);
-            task.timeScore = Math.round(maxScore - index * step);
+            task.timeScore = maxScore - index * step; // Без Math.round
           }
 
           task.stageScore = this.calculateStageScore({
@@ -302,9 +311,8 @@ export class AvrMechanicService {
       }),
     );
 
-    // Сортируем результаты после того как все промисы разрешены
     return result
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => a.branchName.localeCompare(b.branchName))
       .map((item, index) => ({ ...item, place: index + 1 }));
   }
   private calculateStageScore(data: {
@@ -315,13 +323,12 @@ export class AvrMechanicService {
     qualityPenalty: number;
   }): number {
     if (!data.hydraulicTest) return 0;
-    return Math.max(
-      0,
+    const score =
       data.timeScore -
-        data.safetyPenalty -
-        data.culturePenalty -
-        data.qualityPenalty,
-    );
+      data.safetyPenalty -
+      data.culturePenalty -
+      data.qualityPenalty;
+    return Math.max(0, score);
   }
 
   private getScoreRangeForStage(taskNumber: number): [number, number] {
@@ -360,5 +367,31 @@ export class AvrMechanicService {
     return theoryResults.length != 0
       ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
       : 0;
+  }
+
+  private calculateTimeScore(
+    currentTime: string,
+    bestTime: string,
+    worstTime: string,
+    maxScore: number,
+    minScore: number,
+  ): number {
+    const currentSeconds = this.timeToSeconds(currentTime);
+    const bestSeconds = this.timeToSeconds(bestTime);
+    const worstSeconds = this.timeToSeconds(worstTime);
+
+    // Если все участники показали одинаковое время
+    if (bestSeconds === worstSeconds) {
+      return maxScore;
+    }
+
+    // Линейная интерполяция между лучшим и худшим временем
+    const score =
+      maxScore -
+      ((currentSeconds - bestSeconds) * (maxScore - minScore)) /
+        (worstSeconds - bestSeconds);
+
+    // Гарантируем, что баллы в пределах диапазона (без округления)
+    return Number(Math.max(minScore, Math.min(maxScore, score)).toFixed(2));
   }
 }
