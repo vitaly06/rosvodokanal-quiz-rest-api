@@ -60,44 +60,17 @@ export class UserService {
   }
 
   async updateUser(userId: number, dto: UpdateUserRequest) {
-    const { fullNameId, branchId } = { ...dto };
+    const { fullNameId } = { ...dto };
 
     await this.findById(userId);
 
-    if (fullNameId != undefined) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          fullName: {
-            connect: { id: +fullNameId },
-          },
-        },
-      });
-    }
-
-    if (branchId != undefined) {
-      const existBranch = await this.prisma.branch.findUnique({
-        where: { id: +branchId },
-      });
-      if (!existBranch) {
-        throw new NotFoundException('Филиала с таким id не существует');
-      }
-      return await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          fullName: {
-            update: {
-              data: {
-                branchId: +branchId,
-              },
-            },
-          },
-        },
-      });
-    }
-
-    return await this.prisma.user.findUnique({
+    return await this.prisma.user.update({
       where: { id: userId },
+      data: {
+        fullName: {
+          connect: { id: +fullNameId },
+        },
+      },
     });
   }
 
