@@ -130,12 +130,11 @@ export class AvrMechanicService {
       validTimes.push(dto.time);
     }
 
-    // Если нет валидных времен, используем минимальный балл
-    let timeScore = this.getScoreRangeForStage(dto.taskNumber)[1]; // minScore
+    let timeScore = 0;
+    const [maxScore, minScore] = this.getScoreRangeForStage(dto.taskNumber);
 
     if (validTimes.length > 0) {
-      const [maxScore, minScore] = this.getScoreRangeForStage(dto.taskNumber);
-
+      // Сортируем времена от лучшего к худшему
       const sortedTimes = [...validTimes].sort(
         (a, b) => this.timeToSeconds(a) - this.timeToSeconds(b),
       );
@@ -151,8 +150,15 @@ export class AvrMechanicService {
           maxScore,
           minScore,
         );
+      } else {
+        // Если время не указано, ставим минимальный балл
+        timeScore = minScore;
       }
+    } else {
+      // Если нет валидных времен, используем минимальный балл
+      timeScore = minScore;
     }
+
     const stageScore = this.calculateStageScore({
       timeScore,
       hydraulicTest: dto.hydraulicTest ?? false,
@@ -196,7 +202,6 @@ export class AvrMechanicService {
       },
     });
   }
-
   async getTable() {
     const practicNomination = await this.prisma.practicNomination.findUnique({
       where: { name: 'Лучшая бригада АВР на водопроводных сетях' },
@@ -232,13 +237,30 @@ export class AvrMechanicService {
           (a, b) => this.timeToSeconds(a.time) - this.timeToSeconds(b.time),
         );
 
-        // Рассчитываем баллы
+        // Рассчитываем баллы по новой методике
+        const bestTime = sortedTasks[0].time;
+        const worstTime = sortedTasks[sortedTasks.length - 1].time;
+        const scoreRange = maxScore - minScore;
+        const timeRange =
+          this.timeToSeconds(worstTime) - this.timeToSeconds(bestTime);
+        const scorePerSecond = timeRange > 0 ? scoreRange / timeRange : 0;
+
         sortedTasks.forEach((task, index) => {
-          if (index === sortedTasks.length - 1) {
+          if (index === 0) {
+            // Лучший результат - максимальный балл
+            task.timeScore = maxScore;
+          } else if (index === sortedTasks.length - 1) {
+            // Худший результат - минимальный балл
             task.timeScore = minScore;
           } else {
-            const step = (maxScore - minScore) / (sortedTasks.length - 1);
-            task.timeScore = maxScore - index * step; // Без Math.round
+            // Для промежуточных результатов
+            const prevTime = this.timeToSeconds(sortedTasks[index - 1].time);
+            const currentTime = this.timeToSeconds(task.time);
+            const timeDiff = currentTime - prevTime;
+            task.timeScore =
+              sortedTasks[index - 1].timeScore - timeDiff * scorePerSecond;
+            // Округляем до 2 знаков после запятой
+            task.timeScore = Number(task.timeScore.toFixed(2));
           }
 
           task.stageScore = this.calculateStageScore({
@@ -252,7 +274,7 @@ export class AvrMechanicService {
       }
     }
 
-    // Формируем таблицу - используем Promise.all для ожидания всех асинхронных операций
+    // Остальная часть метода остается без изменений
     const result = await Promise.all(
       branches.map(async (branch) => {
         const tasks = allTasks.filter((t) => t.branchId === branch.id);
@@ -315,6 +337,7 @@ export class AvrMechanicService {
       .sort((a, b) => a.branchName.localeCompare(b.branchName))
       .map((item, index) => ({ ...item, place: index + 1 }));
   }
+
   private calculateStageScore(data: {
     timeScore: number;
     hydraulicTest: boolean;
@@ -380,18 +403,34 @@ export class AvrMechanicService {
     const bestSeconds = this.timeToSeconds(bestTime);
     const worstSeconds = this.timeToSeconds(worstTime);
 
-    // Если все участники показали одинаковое время
-    if (bestSeconds === worstSeconds) {
-      return maxScore;
-    }
+    // Если текущее время - лучшее, возвращаем максимальный балл
+    if (currentTime === bestTime) return maxScore;
 
-    // Линейная интерполяция между лучшим и худшим временем
-    const score =
-      maxScore -
-      ((currentSeconds - bestSeconds) * (maxScore - minScore)) /
-        (worstSeconds - bestSeconds);
+    // Если текущее время - худшее, возвращаем минимальный балл
+    if (currentTime === worstTime) return minScore;
 
-    // Гарантируем, что баллы в пределах диапазона (без округления)
-    return Number(Math.max(minScore, Math.min(maxScore, score)).toFixed(2));
+    // Разница между максимальным и минимальным баллом
+    const scoreRange = maxScore - minScore;
+    console.log(`1: ${scoreRange}`);
+    // Разница между худшим и лучшим временем в секундах
+    console.log(worstSeconds);
+    console.log(bestSeconds);
+    const timeRange = +(worstSeconds - bestSeconds);
+    console.log(`2: ${timeRange}, ${timeRange / 60}`);
+    // Стоимость одной секунды в баллах
+    const scorePerSecond = Number((scoreRange / timeRange).toFixed(2));
+    console.log(`3: ${scorePerSecond}`);
+    // Разница между текущим и лучшим временем
+    const timeDiff = currentSeconds - bestSeconds;
+    console.log(`4: ${currentSeconds} - ${bestSeconds} = ${timeDiff}`);
+    // Расчет балла
+    const score = maxScore - timeDiff * Number(scorePerSecond.toFixed(2));
+    console.log(maxScore - timeDiff * Number(scorePerSecond.toFixed(2)));
+    // Гарантируем, что балл в пределах диапазона
+
+    console.log(
+      Math.max(minScore, Math.min(maxScore, Number(score.toFixed(2)))),
+    );
+    return Math.max(minScore, Math.min(maxScore, Number(score.toFixed(2))));
   }
 }

@@ -77,29 +77,33 @@ export class AvrSewerService {
 
   private calculateTimeScore(
     currentTime: string,
-    allTimes: string[],
+    bestTime: string,
+    worstTime: string,
     maxScore: number,
     minScore: number,
   ): number {
     const currentSeconds = this.timeToSeconds(currentTime);
-    const validTimes = allTimes
-      .filter((t) => t && t !== '00:00')
-      .map((t) => this.timeToSeconds(t));
+    const bestSeconds = this.timeToSeconds(bestTime);
+    const worstSeconds = this.timeToSeconds(worstTime);
 
-    if (validTimes.length === 0) return maxScore;
+    // Если текущее время - лучшее, возвращаем максимальный балл
+    if (currentTime === bestTime) return maxScore;
 
-    const bestTime = Math.min(...validTimes);
-    const worstTime = Math.max(...validTimes);
+    // Если текущее время - худшее, возвращаем минимальный балл
+    if (currentTime === worstTime) return minScore;
 
-    if (bestTime === worstTime) return maxScore;
-
-    return Number(
-      (
-        maxScore -
-        ((currentSeconds - bestTime) * (maxScore - minScore)) /
-          (worstTime - bestTime)
-      ).toFixed(2),
-    );
+    // Разница между максимальным и минимальным баллом
+    const scoreRange = maxScore - minScore;
+    // Разница между худшим и лучшим временем в секундах
+    const timeRange = worstSeconds - bestSeconds;
+    // Стоимость одной секунды в баллах
+    const scorePerSecond = scoreRange / timeRange;
+    // Разница между текущим и лучшим временем
+    const timeDiff = currentSeconds - bestSeconds;
+    // Расчет балла
+    const score = maxScore - timeDiff * scorePerSecond;
+    // Гарантируем, что балл в пределах диапазона
+    return Math.max(minScore, Math.min(maxScore, Number(score.toFixed(2))));
   }
 
   async updateTask(dto: UpdateAvrSewerTaskDto) {
@@ -112,7 +116,8 @@ export class AvrSewerService {
     });
     if (!branchExists) throw new Error('Филиал не найден');
 
-    const allTasks = await this.prisma.avrSewerTask.findMany({
+    // Получаем все записи для текущего этапа
+    const allTasksForStage = await this.prisma.avrSewerTask.findMany({
       where: {
         nominationId: nomination.id,
         taskNumber: dto.taskNumber,
@@ -120,13 +125,43 @@ export class AvrSewerService {
       },
     });
 
+    // Добавляем текущее время (если оно валидное)
+    const validTimes = allTasksForStage
+      .map((t) => t.time)
+      .filter((time) => time && time !== '00:00');
+
+    if (dto.time && dto.time !== '00:00') {
+      validTimes.push(dto.time);
+    }
+
+    let timeScore = 0;
     const [maxScore, minScore] = this.getScoreRangeForStage(dto.taskNumber);
-    const timeScore = this.calculateTimeScore(
-      dto.time,
-      allTasks.map((t) => t.time),
-      maxScore,
-      minScore,
-    );
+
+    if (validTimes.length > 0) {
+      // Сортируем времена от лучшего к худшему
+      const sortedTimes = [...validTimes].sort(
+        (a, b) => this.timeToSeconds(a) - this.timeToSeconds(b),
+      );
+
+      const bestTime = sortedTimes[0];
+      const worstTime = sortedTimes[sortedTimes.length - 1];
+
+      if (dto.time && dto.time !== '00:00') {
+        timeScore = this.calculateTimeScore(
+          dto.time,
+          bestTime,
+          worstTime,
+          maxScore,
+          minScore,
+        );
+      } else {
+        // Если время не указано, ставим минимальный балл
+        timeScore = minScore;
+      }
+    } else {
+      // Если нет валидных времен, используем минимальный балл
+      timeScore = minScore;
+    }
 
     const stageScore = dto.hydraulicTest
       ? this.calculateStageScore(
@@ -219,13 +254,37 @@ export class AvrSewerService {
       if (stageTasks.length > 0) {
         const [maxScore, minScore] = this.getScoreRangeForStage(stage);
 
-        stageTasks.forEach((task) => {
-          task.timeScore = this.calculateTimeScore(
-            task.time,
-            stageTasks.map((t) => t.time),
-            maxScore,
-            minScore,
-          );
+        // Сортируем задачи по времени (от лучшего к худшему)
+        const sortedTasks = [...stageTasks].sort(
+          (a, b) => this.timeToSeconds(a.time) - this.timeToSeconds(b.time),
+        );
+
+        // Рассчитываем баллы по новой методике
+        const bestTime = sortedTasks[0].time;
+        const worstTime = sortedTasks[sortedTasks.length - 1].time;
+        const scoreRange = maxScore - minScore;
+        const timeRange =
+          this.timeToSeconds(worstTime) - this.timeToSeconds(bestTime);
+        const scorePerSecond = timeRange > 0 ? scoreRange / timeRange : 0;
+
+        sortedTasks.forEach((task, index) => {
+          if (index === 0) {
+            // Лучший результат - максимальный балл
+            task.timeScore = maxScore;
+          } else if (index === sortedTasks.length - 1) {
+            // Худший результат - минимальный балл
+            task.timeScore = minScore;
+          } else {
+            // Для промежуточных результатов
+            const prevTime = this.timeToSeconds(sortedTasks[index - 1].time);
+            const currentTime = this.timeToSeconds(task.time);
+            const timeDiff = currentTime - prevTime;
+            task.timeScore =
+              sortedTasks[index - 1].timeScore - timeDiff * scorePerSecond;
+            // Округляем до 2 знаков после запятой
+            task.timeScore = Number(task.timeScore.toFixed(2));
+          }
+
           task.stageScore = this.calculateStageScore(
             task.timeScore,
             task.safetyPenalty,

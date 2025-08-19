@@ -14,29 +14,42 @@ export class ChemLabTechnicianService {
 
   private calculateTimeScore(
     currentTime: string,
-    allTimes: string[],
+    sortedTimes: string[],
+    currentIndex: number,
     maxScore: number,
     minScore: number,
   ): number {
+    if (currentIndex === 0) return maxScore; // First place gets max score
+    if (currentIndex === sortedTimes.length - 1) return minScore; // Last place gets min score
+
     const currentSeconds = this.timeToSeconds(currentTime);
-    const validTimes = allTimes
-      .filter((t) => t && t !== '00:00')
-      .map((t) => this.timeToSeconds(t));
+    const prevSeconds = this.timeToSeconds(sortedTimes[currentIndex - 1]);
+    const nextSeconds = this.timeToSeconds(sortedTimes[currentIndex + 1]);
 
-    if (validTimes.length === 0) return maxScore;
+    // Calculate time differences with neighbors
+    const diffWithPrev = currentSeconds - prevSeconds;
+    const diffWithNext = nextSeconds - currentSeconds;
+    const avgDiff = (diffWithPrev + diffWithNext) / 2;
 
-    const bestTime = Math.min(...validTimes);
-    const worstTime = Math.max(...validTimes);
+    // Calculate total time range
+    const totalTimeRange =
+      this.timeToSeconds(sortedTimes[sortedTimes.length - 1]) -
+      this.timeToSeconds(sortedTimes[0]);
 
-    if (bestTime === worstTime) return maxScore;
+    // Calculate total score range
+    const totalScoreRange = maxScore - minScore;
 
-    // Линейная интерполяция между лучшим и худшим временем
-    const score =
-      maxScore -
-      ((currentSeconds - bestTime) * (maxScore - minScore)) /
-        (worstTime - bestTime);
+    // Calculate score by accumulating penalties for each position
+    let score = maxScore;
+    for (let i = 0; i < currentIndex; i++) {
+      const prevTime = this.timeToSeconds(sortedTimes[i]);
+      const nextTime = this.timeToSeconds(sortedTimes[i + 1]);
+      const localDiff = nextTime - prevTime;
+      const localPenalty = (localDiff / totalTimeRange) * totalScoreRange;
+      score -= localPenalty;
+    }
 
-    return Number(Math.max(minScore, Math.min(maxScore, score)).toFixed(2));
+    return Math.max(minScore, Math.min(maxScore, Number(score.toFixed(2))));
   }
 
   private calculateStageScore(
@@ -142,76 +155,105 @@ export class ChemLabTechnicianService {
       },
     });
 
-    // Собираем времена для каждого этапа
-    const stage1aTimes = tasks
-      .filter((t) => t.stage1aTime !== '00:00')
-      .map((t) => t.stage1aTime);
+    // Calculate scores for each stage
+    const results = await Promise.all(
+      tasks.map(async (task) => {
+        // Stage 1a
+        const stage1aTimes = tasks
+          .filter((t) => t.stage1aTime !== '00:00')
+          .map((t) => t.stage1aTime)
+          .sort((a, b) => this.timeToSeconds(a) - this.timeToSeconds(b));
 
-    const stage1bTimes = tasks
-      .filter((t) => t.stage1bTime !== '00:00')
-      .map((t) => t.stage1bTime);
+        const stage1aIndex = stage1aTimes.findIndex(
+          (t) => t === task.stage1aTime,
+        );
+        const stage1aTimeScore =
+          task.stage1aTime !== '00:00' && stage1aIndex >= 0
+            ? this.calculateTimeScore(
+                task.stage1aTime,
+                stage1aTimes,
+                stage1aIndex,
+                40, // maxScore
+                20, // minScore
+              )
+            : 0;
 
-    const stage2Times = tasks
-      .filter((t) => t.stage2Time !== '00:00')
-      .map((t) => t.stage2Time);
+        const stage1aTotal = this.calculateStageScore(
+          stage1aTimeScore,
+          task.stage1aQuality,
+          task.stage1aCulture,
+          task.stage1aSafety,
+        );
 
-    // Рассчитываем результаты для каждого участника
-    const results = tasks.map((task) => {
-      // Этап 1a
-      const stage1aTimeScore =
-        task.stage1aTime !== '00:00'
-          ? this.calculateTimeScore(task.stage1aTime, stage1aTimes, 40, 20)
-          : 0;
+        // Stage 1b
+        const stage1bTimes = tasks
+          .filter((t) => t.stage1bTime !== '00:00')
+          .map((t) => t.stage1bTime)
+          .sort((a, b) => this.timeToSeconds(a) - this.timeToSeconds(b));
 
-      const stage1aTotal = this.calculateStageScore(
-        stage1aTimeScore,
-        task.stage1aQuality,
-        task.stage1aCulture,
-        task.stage1aSafety,
-      );
+        const stage1bIndex = stage1bTimes.findIndex(
+          (t) => t === task.stage1bTime,
+        );
+        const stage1bTimeScore =
+          task.stage1bTime !== '00:00' && stage1bIndex >= 0
+            ? this.calculateTimeScore(
+                task.stage1bTime,
+                stage1bTimes,
+                stage1bIndex,
+                60, // maxScore
+                40, // minScore
+              )
+            : 0;
 
-      // Этап 1b
-      const stage1bTimeScore =
-        task.stage1bTime !== '00:00'
-          ? this.calculateTimeScore(task.stage1bTime, stage1bTimes, 60, 40)
-          : 0;
+        const stage1bTotal = this.calculateStageScore(
+          stage1bTimeScore,
+          task.stage1bQuality,
+          task.stage1bCulture,
+          task.stage1bSafety,
+        );
 
-      const stage1bTotal = this.calculateStageScore(
-        stage1bTimeScore,
-        task.stage1bQuality,
-        task.stage1bCulture,
-        task.stage1bSafety,
-      );
+        // Stage 2
+        const stage2Times = tasks
+          .filter((t) => t.stage2Time !== '00:00')
+          .map((t) => t.stage2Time)
+          .sort((a, b) => this.timeToSeconds(a) - this.timeToSeconds(b));
 
-      // Этап 2
-      const stage2TimeScore =
-        task.stage2Time !== '00:00'
-          ? this.calculateTimeScore(task.stage2Time, stage2Times, 100, 60)
-          : 0;
+        const stage2Index = stage2Times.findIndex((t) => t === task.stage2Time);
+        const stage2TimeScore =
+          task.stage2Time !== '00:00' && stage2Index >= 0
+            ? this.calculateTimeScore(
+                task.stage2Time,
+                stage2Times,
+                stage2Index,
+                100, // maxScore
+                60, // minScore
+              )
+            : 0;
 
-      const stage2Total = this.calculateStageScore(
-        stage2TimeScore,
-        task.stage2Quality,
-        task.stage2Culture,
-        task.stage2Safety,
-      );
+        const stage2Total = this.calculateStageScore(
+          stage2TimeScore,
+          task.stage2Quality,
+          task.stage2Culture,
+          task.stage2Safety,
+        );
 
-      // Итоговый балл
-      const totalPoints = stage1aTotal + stage1bTotal + stage2Total;
+        // Total points
+        const totalPoints = stage1aTotal + stage1bTotal + stage2Total;
 
-      return {
-        ...task,
-        stage1aTimeScore,
-        stage1aTotal,
-        stage1bTimeScore,
-        stage1bTotal,
-        stage2TimeScore,
-        stage2Total,
-        totalPoints,
-      };
-    });
+        return {
+          ...task,
+          stage1aTimeScore,
+          stage1aTotal,
+          stage1bTimeScore,
+          stage1bTotal,
+          stage2TimeScore,
+          stage2Total,
+          totalPoints,
+        };
+      }),
+    );
 
-    // Сортируем по убыванию итоговых баллов
+    // Sort by total points
     const sortedResults = results
       .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0))
       .map((result, index) => ({
@@ -219,7 +261,7 @@ export class ChemLabTechnicianService {
         finalPlace: index + 1,
       }));
 
-    // Сохраняем результаты в БД
+    // Save results to database
     await Promise.all(
       sortedResults.map((result) =>
         this.prisma.chemLabTechnician.update({
