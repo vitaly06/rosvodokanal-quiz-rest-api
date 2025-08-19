@@ -19,6 +19,7 @@ export class UserService {
         number: true,
         fullName: {
           select: {
+            id: true,
             fullName: true,
             branch: {
               select: {
