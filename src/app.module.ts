@@ -24,6 +24,7 @@ import { TruckDriverModule } from './truck-driver/truck-driver.module';
 import { ChemLabTechnicianModule } from './chem-lab-technician/chem-lab-technician.module';
 import { BranchLineNumberModule } from './branch-line-number/branch-line-number.module';
 import { UserLineNumberModule } from './user-line-number/user-line-number.module';
+import { FullNameModule } from './full-name/full-name.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { UserLineNumberModule } from './user-line-number/user-line-number.module
     ChemLabTechnicianModule,
     BranchLineNumberModule,
     UserLineNumberModule,
+    FullNameModule,
   ],
   controllers: [AppController],
   providers: [],
