@@ -19,12 +19,14 @@ export class TruckDriverService {
 
     const users = await this.prisma.user.findMany({
       where: {
-        participatingNominations: {
-          has: practicNomination.id,
+        fullName: {
+          participatingNominations: {
+            has: practicNomination.id,
+          },
         },
       },
       include: {
-        branch: true,
+        fullName: { include: { branch: true } },
       },
     });
     for (const user of users) {
@@ -36,8 +38,8 @@ export class TruckDriverService {
       });
 
       result.push({
-        branchName: user.branch.address,
-        fullName: user.fullName,
+        branchName: user.fullName.branch.address,
+        fullName: user.fullName.fullName,
         theoryScore: results.theoryPoints || 0,
         practiceScore: results.practicePoints || 0,
         totalScore: results.totalPoints,
@@ -94,7 +96,7 @@ export class TruckDriverService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
-      include: { branch: true },
+      include: { fullName: { include: { branch: true } } },
     });
 
     if (!user) {
@@ -109,7 +111,7 @@ export class TruckDriverService {
     const createData = {
       ...updateData,
       userId: dto.userId,
-      branchId: user.branchId,
+      branchId: user.fullName.branchId,
       nominationId: nomination.id,
       theoryCorrect: 0,
       theoryTime: '00:00',
@@ -152,8 +154,10 @@ export class TruckDriverService {
     // Get all participants with test results
     const participants = await this.prisma.user.findMany({
       where: {
-        participatingNominations: {
-          has: practicNomination.id,
+        fullName: {
+          participatingNominations: {
+            has: practicNomination.id,
+          },
         },
         TestResult: {
           some: {
@@ -162,7 +166,7 @@ export class TruckDriverService {
         },
       },
       include: {
-        branch: true,
+        fullName: { include: { branch: true } },
         TestResult: {
           where: {
             nominationId: nomination.id,
@@ -249,8 +253,8 @@ export class TruckDriverService {
 
         return {
           userId: p.id,
-          branchId: p.branchId,
-          branchName: p.branch?.address || '',
+          branchId: p.fullName.branchId,
+          branchName: p.fullName.branch?.address || '',
           participantName: p.fullName || `Участник ${p.id}`,
           number: p.number,
           // Theory
@@ -352,11 +356,15 @@ export class TruckDriverService {
         user: {
           select: {
             id: true,
-            fullName: true,
-            branch: {
+            fullName: {
               select: {
-                id: true,
-                address: true,
+                fullName: true,
+                branch: {
+                  select: {
+                    id: true,
+                    address: true,
+                  },
+                },
               },
             },
           },
@@ -400,11 +408,11 @@ export class TruckDriverService {
         },
         user: {
           id: task.user.id,
-          fullName: task.user.fullName,
+          fullName: task.user.fullName.fullName,
         },
         branch: {
-          id: task.user.branch.id,
-          address: task.user.branch.address,
+          id: task.user.fullName.branch.id,
+          address: task.user.fullName.branch.address,
         },
       });
     }

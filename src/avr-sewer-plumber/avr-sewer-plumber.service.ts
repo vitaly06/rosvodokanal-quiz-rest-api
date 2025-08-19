@@ -75,7 +75,7 @@ export class AvrSewerPlumberService {
             nomination: { name: 'Слесарь АВР' },
           },
         },
-        branch: true,
+        fullName: { include: { branch: true } },
       },
     });
 
@@ -154,7 +154,7 @@ export class AvrSewerPlumberService {
       },
       create: {
         userId: dto.userId,
-        branchId: user.branchId,
+        branchId: user.fullName.branchId,
         nominationId: nomination.id,
         time: dto.time,
         timeScore,
@@ -188,12 +188,14 @@ export class AvrSewerPlumberService {
             nominationId: nomination.id,
           },
         },
-        participatingNominations: {
-          has: practicNomination.id,
+        fullName: {
+          participatingNominations: {
+            has: practicNomination.id,
+          },
         },
       },
       include: {
-        branch: true,
+        fullName: { include: { branch: true } },
         AvrSewerPlumberTask: {
           where: {
             nominationId: nomination.id,
@@ -201,6 +203,8 @@ export class AvrSewerPlumberService {
         },
       },
     });
+
+    console.log(participants);
 
     // Get all tasks for score calculation
     const allTasks = await this.prisma.avrSewerPlumberTask.findMany({
@@ -260,12 +264,12 @@ export class AvrSewerPlumberService {
         });
 
         return {
-          branchId: user.branchId,
+          branchId: user.fullName.branchId,
           practicNominationId: practicNomination.id,
           lineNumber: lineNumber?.lineNumber ?? null,
-          branchName: user.branch.address,
+          branchName: user.fullName.branch.address,
           userId: user.id,
-          participantName: user.fullName || `Участник ${user.id}`,
+          participantName: user.fullName.fullName || `Участник ${user.id}`,
           number: user.number,
           time: task?.time || '00:00',
           timeScore,
@@ -297,9 +301,9 @@ export class AvrSewerPlumberService {
 
     const users = await this.prisma.user.findMany({
       where: {
-        participatingNominations: { has: practicNomination.id },
+        fullName: { participatingNominations: { has: practicNomination.id } },
       },
-      include: { branch: true },
+      include: { fullName: { include: { branch: true } } },
     });
 
     const result = await Promise.all(
@@ -313,7 +317,7 @@ export class AvrSewerPlumberService {
         });
 
         return {
-          branchName: user.branch.address,
+          branchName: user.fullName.branch.address,
           fullName: user.fullName,
           theoryScore: theoryResults[0]?.score || 0,
           practiceScore: practicResults.reduce(

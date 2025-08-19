@@ -159,10 +159,21 @@ export class TestService {
     }
 
     // Обновляем данные пользователя
+    // if (fullName || branchId) {
+    //   await this.prisma.user.update({
+    //     where: { id: session.userId },
+    //     data: { fullName, branchId },
+    //   });
+    // }
     if (fullName || branchId) {
-      await this.prisma.user.update({
-        where: { id: session.userId },
-        data: { fullName, branchId },
+      await this.prisma.fullName.update({
+        where: {
+          userId: session.userId,
+        },
+        data: {
+          fullName,
+          branchId,
+        },
       });
     }
 

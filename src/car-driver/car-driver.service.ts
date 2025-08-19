@@ -19,12 +19,15 @@ export class CarDriverService {
 
     const users = await this.prisma.user.findMany({
       where: {
-        participatingNominations: {
-          has: practicNomination.id,
+        fullName: {
+          participatingNominations: {
+            has: practicNomination.id,
+          },
         },
       },
+
       include: {
-        branch: true,
+        fullName: { include: { branch: true } },
       },
     });
     for (const user of users) {
@@ -36,7 +39,7 @@ export class CarDriverService {
       });
 
       result.push({
-        branchName: user.branch.address,
+        branchName: user.fullName.branch.address,
         fullName: user.fullName,
         theoryScore: results.theoryPoints || 0,
         practiceScore: results.practicePoints || 0,
@@ -93,7 +96,7 @@ export class CarDriverService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
-      include: { branch: true },
+      include: { fullName: { include: { branch: true } } },
     });
 
     if (!user) {
@@ -108,7 +111,7 @@ export class CarDriverService {
     const createData = {
       ...updateData,
       userId: dto.userId,
-      branchId: user.branchId,
+      branchId: user.fullName.branchId,
       nominationId: nomination.id,
       theoryCorrect: 0,
       theoryTime: '00:00',
@@ -155,8 +158,10 @@ export class CarDriverService {
     // Получаем всех участников
     const participants = await this.prisma.user.findMany({
       where: {
-        participatingNominations: {
-          has: practicNomination.id,
+        fullName: {
+          participatingNominations: {
+            has: practicNomination.id,
+          },
         },
         TestResult: {
           some: {
@@ -165,7 +170,7 @@ export class CarDriverService {
         },
       },
       include: {
-        branch: true,
+        fullName: { include: { branch: true } },
         TestResult: {
           where: {
             nominationId: nomination.id,
@@ -250,9 +255,9 @@ export class CarDriverService {
 
         return {
           userId: p.id,
-          branchId: p.branchId,
-          branchName: p.branch?.address || '',
-          participantName: p.fullName || `Участник ${p.id}`,
+          branchId: p.fullName.branchId,
+          branchName: p.fullName.branch?.address || '',
+          participantName: p.fullName.fullName || `Участник ${p.id}`,
           number: p.number,
           // Теория
           theoryCorrect: theory?.theoryCorrect || 0,
@@ -350,11 +355,15 @@ export class CarDriverService {
         user: {
           select: {
             id: true,
-            fullName: true,
-            branch: {
+            fullName: {
               select: {
-                id: true,
-                address: true,
+                fullName: true,
+                branch: {
+                  select: {
+                    id: true,
+                    address: true,
+                  },
+                },
               },
             },
           },
@@ -399,11 +408,11 @@ export class CarDriverService {
         },
         user: {
           id: task.user.id,
-          fullName: task.user.fullName,
+          fullName: task.user.fullName.fullName,
         },
         branch: {
-          id: task.user.branch.id,
-          address: task.user.branch.address,
+          id: task.user.fullName.branch.id,
+          address: task.user.fullName.branch.address,
         },
       });
     }

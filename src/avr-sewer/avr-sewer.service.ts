@@ -37,8 +37,10 @@ export class AvrSewerService {
       const theoryResults = await this.prisma.testResult.findMany({
         where: {
           user: {
-            participatingNominations: { has: practicNomination.id },
-            branch: { address: branch.address },
+            fullName: {
+              participatingNominations: { has: practicNomination.id },
+              branch: { address: branch.address },
+            },
           },
           nomination: { id: theoryNomination.id },
         },
@@ -46,8 +48,13 @@ export class AvrSewerService {
 
       const team = await this.prisma.user.findMany({
         where: {
-          branch: { id: branch.id },
-          participatingNominations: { has: practicNomination.id },
+          fullName: {
+            branch: { id: branch.id },
+            participatingNominations: { has: practicNomination.id },
+          },
+        },
+        include: {
+          fullName: true,
         },
       });
 
@@ -63,7 +70,7 @@ export class AvrSewerService {
 
       result.push({
         branchName: branch.address,
-        team: team.map((user) => user.fullName),
+        team: team.map((user) => user.fullName.fullName),
         theoryScore,
         practiceScore,
         totalScore: theoryScore + practiceScore,
@@ -362,8 +369,10 @@ export class AvrSewerService {
     const results = await this.prisma.testResult.findMany({
       where: {
         user: {
-          participatingNominations: { has: practicNominationId },
-          branch: { address: branch.address },
+          fullName: {
+            participatingNominations: { has: practicNominationId },
+            branch: { address: branch.address },
+          },
         },
         nomination: { id: theoryNominationId },
       },

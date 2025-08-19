@@ -22,21 +22,33 @@ model PracticNomination {
   UserLineNumber   UserLineNumber[]
 }
 
-model User {
-  id                       Int                   @id @default(autoincrement())
-  number                   String                @unique @db.Char(6)
-  fullName                 String?
+model FullName {
+  id                       Int     @id @default(autoincrement())
+  fullName                 String
   branchId                 Int?
-  branch                   Branch?               @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  participatingNominations Int[]                 @default([]) // номинации в которых участвует юзер
-  TestResult               TestResult[]
-  AvrPlumberTask           AvrPlumberTask[]
-  AvrSewerPlumberTask      AvrSewerPlumberTask[]
-  CarDriverTask            CarDriverTask[]
-  TruckDriverTask          TruckDriverTask[]
-  ChemLabTechnician        ChemLabTechnician[]
-  WelderTask               WelderTask[]
-  UserLineNumber           UserLineNumber[]
+  branch                   Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  participatingNominations Int[]   @default([])
+  user                     User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                   Int?    @unique // Связь один-к-одному
+}
+
+model User {
+  id                  Int                   @id @default(autoincrement())
+  number              String                @unique @db.Char(6)
+  // branchId                 Int?
+  // branch                   Branch?               @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  // participatingNominations Int[]                 @default([])
+  fullName            FullName? // Связь один-к-одному
+  TestResult          TestResult[]
+  AvrPlumberTask      AvrPlumberTask[]
+  AvrSewerPlumberTask AvrSewerPlumberTask[]
+  CarDriverTask       CarDriverTask[]
+  TruckDriverTask     TruckDriverTask[]
+  ChemLabTechnician   ChemLabTechnician[]
+  WelderTask          WelderTask[]
+  UserLineNumber      UserLineNumber[]
+  // Branch              Branch?               @relation(fields: [branchId], references: [id])
+  // branchId            Int?
 }
 
 model Nomination {
@@ -63,7 +75,7 @@ model Branch {
   address String @unique
 
   participatingNominations Int[] // Бригадные мероприятия, в которых участвует филиал
-  User                     User[]
+  // User                     User[]
   PracticeTask             PracticeTask[]
   AvrMechanicTask          AvrMechanicTask[]
   WelderTask               WelderTask[]
@@ -74,6 +86,7 @@ model Branch {
   TruckDriverTask          TruckDriverTask[]
   ChemLabTechnician        ChemLabTechnician[]
   BranchLineNumber         BranchLineNumber[]
+  FullName                 FullName[]
 }
 
 model Question {
@@ -242,20 +255,19 @@ model AvrPlumberTask {
 
 // Лучшая бригада  АВР по канализационным сетям - 2025
 model AvrSewerTask {
-  id             Int     @id @default(autoincrement())
+  id             Int        @id @default(autoincrement())
   taskNumber     Int // Номер этапа (1-4)
-  time           String  @db.VarChar(5) // Время в формате мм:сс
+  time           String     @db.VarChar(5) // Время в формате мм:сс
   timeScore      Float // Баллы за время (вычисляется)
   hydraulicTest  Boolean // Гидравлическое испытание (+/-)
   safetyPenalty  Float // Штраф по охране труда (0-15)
   culturePenalty Float // Штраф за культуру (0-5)
   qualityPenalty Float // Штраф за качество
   stageScore     Float // Баллы за этап (вычисляется)
-
-  branchId     Int
-  branch       Branch     @relation(fields: [branchId], references: [id])
-  nominationId Int
-  nomination   Nomination @relation(fields: [nominationId], references: [id])
+  branchId       Int
+  branch         Branch     @relation(fields: [branchId], references: [id])
+  nominationId   Int
+  nomination     Nomination @relation(fields: [nominationId], references: [id])
 
   @@unique([branchId, nominationId, taskNumber], name: "avr_sewer_unique_task")
 }

@@ -72,7 +72,7 @@ export class ChemLabTechnicianService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
-      include: { branch: true },
+      include: { fullName: { include: { branch: true } } },
     });
 
     if (!user) {
@@ -104,7 +104,7 @@ export class ChemLabTechnicianService {
       },
       create: {
         userId: dto.userId,
-        branchId: user.branchId,
+        branchId: user.fullName.branchId,
         nominationId: nomination.id,
         stage1aTime: dto.stage1aTime ?? '00:00',
         stage1aQuality: dto.stage1aQuality ?? 0,
@@ -141,15 +141,17 @@ export class ChemLabTechnicianService {
       where: {
         nominationId: nomination.id,
         user: {
-          participatingNominations: {
-            has: practicNomination.id,
+          fullName: {
+            participatingNominations: {
+              has: practicNomination.id,
+            },
           },
         },
       },
       include: {
         user: {
           include: {
-            branch: true,
+            fullName: { include: { branch: true } },
           },
         },
       },
@@ -305,12 +307,14 @@ export class ChemLabTechnicianService {
             nominationId: nomination.id,
           },
         },
-        participatingNominations: {
-          has: practicNomination.id,
+        fullName: {
+          participatingNominations: {
+            has: practicNomination.id,
+          },
         },
       },
       include: {
-        branch: true,
+        fullName: { include: { branch: true } },
         ChemLabTechnician: {
           where: {
             nominationId: nomination.id,
@@ -341,9 +345,10 @@ export class ChemLabTechnicianService {
           practicNominationId: practicNomination.id,
           lineNumber: lineNumber?.lineNumber ?? null,
           userId: participant.id,
-          branchId: participant.branchId,
-          branchName: participant.branch.address,
-          participantName: participant.fullName || `Участник ${participant.id}`,
+          branchId: participant.fullName.branchId,
+          branchName: participant.fullName.branch.address,
+          participantName:
+            participant.fullName.fullName || `Участник ${participant.id}`,
           number: participant.number,
           stages: [
             {
@@ -398,9 +403,9 @@ export class ChemLabTechnicianService {
 
     const users = await this.prisma.user.findMany({
       where: {
-        participatingNominations: { has: practicNomination.id },
+        fullName: { participatingNominations: { has: practicNomination.id } },
       },
-      include: { branch: true },
+      include: { fullName: { include: { branch: true } } },
     });
 
     const result = await Promise.all(
@@ -414,7 +419,7 @@ export class ChemLabTechnicianService {
         });
 
         return {
-          branchName: user.branch.address,
+          branchName: user.fullName.branch.address,
           fullName: user.fullName,
           theoryScore: theoryResults[0]?.score || 0,
           practiceScore: practicResults?.totalPoints || 0,

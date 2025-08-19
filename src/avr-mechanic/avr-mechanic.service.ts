@@ -39,11 +39,13 @@ export class AvrMechanicService {
       theoryResults = await this.prisma.testResult.findMany({
         where: {
           user: {
-            participatingNominations: {
-              has: practicNomination.id,
-            },
-            branch: {
-              address: branch.address,
+            fullName: {
+              participatingNominations: {
+                has: practicNomination.id,
+              },
+              branch: {
+                address: branch.address,
+              },
             },
           },
           nomination: {
@@ -54,16 +56,21 @@ export class AvrMechanicService {
 
       const team = await this.prisma.user.findMany({
         where: {
-          branch: { id: branch.id },
-          participatingNominations: {
-            has: practicNomination.id,
+          fullName: {
+            branch: { id: branch.id },
+            participatingNominations: {
+              has: practicNomination.id,
+            },
           },
+        },
+        include: {
+          fullName: true,
         },
       });
 
       result.push({
         branchName: branch.address,
-        team: team.map((elem) => elem.fullName),
+        team: team.map((elem) => elem.fullName.fullName),
         theoryScore:
           theoryResults.length != 0
             ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
@@ -375,11 +382,13 @@ export class AvrMechanicService {
     const theoryResults = await this.prisma.testResult.findMany({
       where: {
         user: {
-          participatingNominations: {
-            has: practicNominationId,
-          },
-          branch: {
-            address: branch.address,
+          fullName: {
+            participatingNominations: {
+              has: practicNominationId,
+            },
+            branch: {
+              address: branch.address,
+            },
           },
         },
         nomination: {

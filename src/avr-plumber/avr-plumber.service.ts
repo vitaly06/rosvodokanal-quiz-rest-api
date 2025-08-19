@@ -78,7 +78,7 @@ export class AvrPlumberService {
             nomination: { name: 'Слесарь АВР' },
           },
         },
-        branch: true,
+        fullName: { include: { branch: true } },
       },
     });
 
@@ -153,7 +153,7 @@ export class AvrPlumberService {
       },
       create: {
         userId: dto.userId,
-        branchId: user.branchId,
+        branchId: user.fullName.branchId,
         nominationId: nomination.id,
         time: dto.time,
         timeScore,
@@ -187,12 +187,14 @@ export class AvrPlumberService {
             nominationId: nomination.id,
           },
         },
-        participatingNominations: {
-          has: practicNomination.id,
+        fullName: {
+          participatingNominations: {
+            has: practicNomination.id,
+          },
         },
       },
       include: {
-        branch: true,
+        fullName: { include: { branch: true } },
         AvrPlumberTask: {
           where: {
             nominationId: nomination.id,
@@ -262,9 +264,9 @@ export class AvrPlumberService {
           userId: user.id,
           practicNominationId: practicNomination.id,
           lineNumber: lineNumber?.lineNumber ?? null,
-          branchId: user.branchId,
-          branchName: user.branch.address,
-          participantName: user.fullName || `Участник ${user.id}`,
+          branchId: user.fullName.branchId,
+          branchName: user.fullName.branch.address,
+          participantName: user.fullName.fullName || `Участник ${user.id}`,
           number: user.number,
           time: task?.time || '00:00',
           timeScore,
@@ -296,9 +298,9 @@ export class AvrPlumberService {
 
     const users = await this.prisma.user.findMany({
       where: {
-        participatingNominations: { has: practicNomination.id },
+        fullName: { participatingNominations: { has: practicNomination.id } },
       },
-      include: { branch: true },
+      include: { fullName: { include: { branch: true } } },
     });
 
     const result = await Promise.all(
@@ -312,7 +314,7 @@ export class AvrPlumberService {
         });
 
         return {
-          branchName: user.branch.address,
+          branchName: user.fullName.branch.address,
           fullName: user.fullName,
           theoryScore: theoryResults[0]?.score || 0,
           practiceScore: practicResults.reduce(

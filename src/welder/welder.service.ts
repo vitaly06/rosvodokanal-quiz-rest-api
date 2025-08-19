@@ -18,12 +18,14 @@ export class WelderService {
 
     const users = await this.prisma.user.findMany({
       where: {
-        participatingNominations: {
-          has: practicNomination.id,
+        fullName: {
+          participatingNominations: {
+            has: practicNomination.id,
+          },
         },
       },
       include: {
-        branch: true,
+        fullName: { include: { branch: true } },
       },
     });
     let theoryResults;
@@ -41,8 +43,8 @@ export class WelderService {
       });
 
       result.push({
-        branchName: user.branch.address,
-        fullName: user.fullName,
+        branchName: user.fullName.branch.address,
+        fullName: user.fullName.fullName,
         theoryScore: theoryResults[0].score || 0,
         practiceScore: practicResults.reduce(
           (sum, elem) => (sum += elem.stageScore),
@@ -175,15 +177,17 @@ export class WelderService {
       where: {
         nominationId: nomination.id,
         user: {
-          participatingNominations: {
-            has: practicNomination.id,
+          fullName: {
+            participatingNominations: {
+              has: practicNomination.id,
+            },
           },
         },
       },
       include: {
         user: {
           include: {
-            branch: true,
+            fullName: { include: { branch: true } },
           },
         },
       },
@@ -198,7 +202,7 @@ export class WelderService {
       branches
         .map((branch) => {
           const branchParticipants = testResults
-            .filter((result) => result.user?.branchId === branch.id)
+            .filter((result) => result.user?.fullName.branchId === branch.id)
             .map((result) => result.user);
 
           if (branchParticipants.length === 0) {
@@ -281,7 +285,7 @@ export class WelderService {
               lineNumber: lineNumber?.lineNumber || null,
               branchName: branch.address,
               userId: user.id,
-              participantName: user.fullName || 'Неизвестный участник',
+              participantName: user.fullName.fullName || 'Неизвестный участник',
               stages,
               theoryScore,
               practiceScore,

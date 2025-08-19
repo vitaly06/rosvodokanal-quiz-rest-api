@@ -18,7 +18,9 @@ export class StatisticService {
       ...(nominationId && { nominationId }),
       ...(branchId && {
         user: {
-          branchId,
+          fullName: {
+            branchId,
+          },
         },
       }),
     };
@@ -30,9 +32,13 @@ export class StatisticService {
         nominationId: true,
         user: {
           select: {
-            branch: {
+            fullName: {
               select: {
-                id: true,
+                branch: {
+                  select: {
+                    id: true,
+                  },
+                },
               },
             },
           },
@@ -76,11 +82,15 @@ export class StatisticService {
           select: {
             id: true,
             number: true,
-            fullName: true,
-            branch: {
+            fullName: {
               select: {
-                id: true,
-                address: true,
+                fullName: true,
+                branch: {
+                  select: {
+                    id: true,
+                    address: true,
+                  },
+                },
               },
             },
           },
@@ -99,10 +109,10 @@ export class StatisticService {
       filterResults['testResults'].push({
         userId: item.user.id,
         number: item.user.number,
-        fullName: item.user.fullName,
+        fullName: item.user.fullName.fullName,
         nominationId: item.nomination.id,
         nomination: item.nomination.name,
-        branch: item.user.branch?.address || 'Филиал не указан',
+        branch: item.user.fullName.branch?.address || 'Филиал не указан',
         date: item.duration,
         result: `${item.score}/${item.total}`,
         percentage: item.percentage,
@@ -157,9 +167,14 @@ export class StatisticService {
             id: true,
             user: {
               select: {
-                branch: {
+                fullName: {
                   select: {
-                    address: true,
+                    fullName: true,
+                    branch: {
+                      select: {
+                        address: true,
+                      },
+                    },
                   },
                 },
               },
@@ -178,8 +193,8 @@ export class StatisticService {
       points[branch.address] = 0;
     }
     for (const result of nomination.TestResult) {
-      if (result.user.branch.address) {
-        points[result.user.branch.address] += result.score;
+      if (result.user.fullName.branch.address) {
+        points[result.user.fullName.branch.address] += result.score;
       }
     }
     for (const branch of branchs) {
@@ -214,8 +229,10 @@ export class StatisticService {
       testResults = await this.prisma.testResult.findMany({
         where: {
           user: {
-            branch: {
-              id: branch.id,
+            fullName: {
+              branch: {
+                id: branch.id,
+              },
             },
           },
           nomination: {
