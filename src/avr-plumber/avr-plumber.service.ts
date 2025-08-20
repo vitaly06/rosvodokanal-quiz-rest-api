@@ -322,7 +322,7 @@ export class AvrPlumberService {
 
         return {
           branchName: user.fullName.branch.address,
-          fullName: user.fullName,
+          fullName: user.fullName.fullName,
           theoryScore: theoryResults[0]?.score || 0,
           practiceScore: practicResults.reduce(
             (sum, elem) => sum + elem.stageScore,

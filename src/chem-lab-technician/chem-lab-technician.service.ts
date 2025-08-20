@@ -424,7 +424,7 @@ export class ChemLabTechnicianService {
 
         return {
           branchName: user.fullName.branch.address,
-          fullName: user.fullName,
+          fullName: user.fullName.fullName,
           theoryScore: theoryResults[0]?.score || 0,
           practiceScore: practicResults?.totalPoints || 0,
           totalScore:

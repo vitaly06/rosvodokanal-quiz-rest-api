@@ -40,7 +40,7 @@ export class CarDriverService {
 
       result.push({
         branchName: user.fullName.branch.address,
-        fullName: user.fullName,
+        fullName: user.fullName.fullName,
         theoryScore: results?.theoryPoints || 0,
         practiceScore: results?.practicePoints || 0,
         totalScore: results?.totalPoints,
