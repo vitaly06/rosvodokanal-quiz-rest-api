@@ -323,7 +323,7 @@ export class ChemLabTechnicianService {
       },
     });
 
-    const result = await Promise.all(
+    let result = await Promise.all(
       participants.map(async (participant) => {
         const task = participant.ChemLabTechnician[0] || null;
         const theoryScore = await this.getTheoryScore(
@@ -382,14 +382,18 @@ export class ChemLabTechnicianService {
           theoryScore,
           practiceScore: task?.totalPoints || 0,
           total: theoryScore + (task?.totalPoints || 0),
-          finalPlace: task?.finalPlace || null,
+          // place: task?.finalPlace || null,
         };
       }),
     );
 
-    return result
-      .sort((a, b) => a.participantName.localeCompare(b.participantName))
+    result = result
+      .sort((a, b) => b.total - a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
+
+    return result.sort((a, b) =>
+      a.participantName.localeCompare(b.participantName),
+    );
   }
 
   async getResultTable() {

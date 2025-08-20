@@ -27,8 +27,8 @@ export class BranchLineNumberService {
     return this.prisma.branchLineNumber.findUnique({
       where: {
         branch_practic_line_unique: {
-          branchId,
-          practicNominationId,
+          branchId: +branchId,
+          practicNominationId: +practicNominationId,
         },
       },
     });

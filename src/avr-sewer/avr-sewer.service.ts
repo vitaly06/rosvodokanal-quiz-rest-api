@@ -302,7 +302,7 @@ export class AvrSewerService {
       }
     }
 
-    const result = await Promise.all(
+    let result = await Promise.all(
       branches.map(async (branch) => {
         const tasks = allTasks.filter((t) => t.branchId === branch.id);
         const stages = [1, 2, 3, 4].map(
@@ -343,9 +343,11 @@ export class AvrSewerService {
       }),
     );
 
-    return result
-      .sort((a, b) => a.branchName.localeCompare(b.branchName))
+    result = result
+      .sort((a, b) => b.total - a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
+
+    return result.sort((a, b) => a.branchName.localeCompare(b.branchName));
   }
 
   private createEmptyStage(taskNumber: number) {

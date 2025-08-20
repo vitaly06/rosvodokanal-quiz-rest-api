@@ -198,7 +198,7 @@ export class WelderService {
         nominationId: nomination.id,
       },
     });
-    const result = await Promise.all(
+    let result = await Promise.all(
       branches
         .map((branch) => {
           const branchParticipants = testResults
@@ -296,13 +296,17 @@ export class WelderService {
         .flat(),
     );
 
-    return result
-      .sort((a, b) => a.participantName.localeCompare(b.participantName))
+    result = result
+      .sort((a, b) => b.total - a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
+
+    return result.sort((a, b) =>
+      a.participantName.localeCompare(b.participantName),
+    );
   }
 
   private createEmptyStage(taskNumber: number): any {
-    return {
+    const returnedData = {
       taskNumber,
       time: '00:00',
       timeScore: taskNumber == 1 ? 40 : 70,
@@ -312,6 +316,13 @@ export class WelderService {
       qualityPenalty: 0,
       stageScore: taskNumber == 1 ? 40 : 70,
     };
+    if (taskNumber == 1) {
+      returnedData['operationalControl'] = 0;
+      returnedData['visualMeasurement'] = 0;
+      returnedData['radiographicControl'] = 0;
+    }
+
+    return returnedData;
   }
 
   async getTheoryScore(userId: number, nominationId: number) {

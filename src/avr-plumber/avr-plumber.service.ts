@@ -213,7 +213,7 @@ export class AvrPlumberService {
       .map((t) => t.time)
       .filter((t) => t && t !== '00:00');
 
-    const tableData = await Promise.all(
+    let tableData = await Promise.all(
       participants.map(async (user) => {
         const task = user.AvrPlumberTask[0] || null;
 
@@ -281,10 +281,13 @@ export class AvrPlumberService {
       }),
     );
 
-    // Sort alphabetically
-    return tableData
-      .sort((a, b) => a.participantName.localeCompare(b.participantName))
+    tableData = tableData
+      .sort((a, b) => b.total - a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
+
+    return tableData.sort((a, b) =>
+      a.participantName.localeCompare(b.participantName),
+    );
   }
 
   async getResultTable() {

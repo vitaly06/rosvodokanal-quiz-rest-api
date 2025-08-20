@@ -75,9 +75,10 @@ export class AvrMechanicService {
           theoryResults.length != 0
             ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
             : 0,
-        practiceScore: practicResults.reduce(
-          (sum, elem) => (sum += elem.stageScore),
-          0,
+        practiceScore: Number(
+          practicResults
+            .reduce((sum, elem) => (sum += elem.stageScore), 0)
+            .toFixed(2),
         ),
         totalScore:
           (theoryResults.length != 0
@@ -282,7 +283,7 @@ export class AvrMechanicService {
     }
 
     // Остальная часть метода остается без изменений
-    const result = await Promise.all(
+    let result = await Promise.all(
       branches.map(async (branch) => {
         const tasks = allTasks.filter((t) => t.branchId === branch.id);
 
@@ -340,9 +341,11 @@ export class AvrMechanicService {
       }),
     );
 
-    return result
-      .sort((a, b) => a.branchName.localeCompare(b.branchName))
+    result = result
+      .sort((a, b) => b.total - a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
+
+    return result.sort((a, b) => a.branchName.localeCompare(b.branchName));
   }
 
   private calculateStageScore(data: {

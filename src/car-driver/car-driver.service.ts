@@ -41,9 +41,9 @@ export class CarDriverService {
       result.push({
         branchName: user.fullName.branch.address,
         fullName: user.fullName,
-        theoryScore: results.theoryPoints || 0,
-        practiceScore: results.practicePoints || 0,
-        totalScore: results.totalPoints,
+        theoryScore: results?.theoryPoints || 0,
+        practiceScore: results?.practicePoints || 0,
+        totalScore: results?.totalPoints,
       });
     }
 
@@ -347,7 +347,7 @@ export class CarDriverService {
       throw new Error('Номинация не найдена');
     }
 
-    const result = [];
+    let result = [];
 
     const tasks = await this.prisma.carDriverTask.findMany({
       where: { nominationId: nomination.id },
@@ -404,7 +404,7 @@ export class CarDriverService {
           theoryPoints: task.totalTheoryPoints,
           practicePoints: task.totalPracticePoints,
           points: task.totalPoints,
-          place: task.finalPlace,
+          // place: task.finalPlace,
         },
         user: {
           id: task.user.id,
@@ -417,8 +417,12 @@ export class CarDriverService {
       });
     }
 
-    return result
-      .sort((a, b) => a.user.fullName.localeCompare(b.user.fullName))
+    result = result
+      .sort((a, b) => b.total - a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
+
+    return result.sort((a, b) =>
+      a.user.fullName.localeCompare(b.user.fullName),
+    );
   }
 }
