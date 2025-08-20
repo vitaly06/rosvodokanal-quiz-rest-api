@@ -7108,6 +7108,7 @@ COPY public."Branch" (id, address, "participatingNominations") FROM stdin;
 --
 
 COPY public."BranchLineNumber" (id, "branchId", "practicNominationId", "lineNumber") FROM stdin;
+1	3	1	1
 \.
 
 
@@ -7120,12 +7121,12 @@ COPY public."CarDriverTask" (id, "theoryCorrect", "theoryTime", "theoryPlace", "
 6	16	01:44	2	9	0	00:00	0	8	2	9	2	11	3	133	14	7
 5	14	01:32	7	3	0	00:00	0	4	6	3	6	9	5	96	9	7
 4	16	02:07	3	7	5	10:00	605	10	0	7	0	7	9	19	8	7
-7	15	01:18	4	6	0	10:00	600	9	1	6	1	7	10	31	3	7
 12	11	01:23	9	1	0	00:00	0	3	7	1	7	8	7	74	6	7
 8	15	01:39	5	5	0	00:00	0	7	3	5	3	8	8	125	12	7
 9	11	01:45	10	0	0	00:00	0	2	9	0	9	9	4	60	5	7
 11	15	01:45	6	4	0	00:00	0	5	5	4	5	9	6	106	10	7
 10	13	02:03	8	2	0	00:00	0	1	12	2	12	14	2	46	4	7
+7	15	01:18	1	3	0	10:00	600	1	3	3	3	6	1	31	3	7
 \.
 
 
@@ -7155,6 +7156,7 @@ COPY public."ChemLabTechnician" (id, "stage1aTime", "stage1aTimeScore", "stage1a
 --
 
 COPY public."FullName" (id, "fullName", "branchId", "participatingNominations", "userId") FROM stdin;
+9	Сергеев Андрей Петрович	8	{1}	15
 1	Шевчук Алексей Сергеевич	8	{1}	7
 2	Лапин Борис Александрович	8	{2}	8
 3	Воробьев Евгений Викторович	8	{3}	9
@@ -7163,7 +7165,6 @@ COPY public."FullName" (id, "fullName", "branchId", "participatingNominations", 
 6	Лахов Виталий Анатольевич	8	{6}	12
 7	Беляшев Денис Борисович	8	{7}	13
 8	Бурак Вероника Геннадьевна	8	{8}	14
-9	Сергеев Андрей петрович	8	{1}	15
 10	Перун Дмитрий Олегович	8	{1}	16
 11	Бисенгалиев Улжас Болатович	8	{1}	17
 12	Троицкий Владимир Александрович	8	{1}	18
@@ -10538,8 +10539,8 @@ COPY public."TestResult" (id, "userId", "nominationId", score, total, percentage
 --
 
 COPY public."TruckDriverTask" (id, "theoryCorrect", "theoryTime", "theoryPlace", "theoryPoints", "practicePenalty", "practiceTime", "practiceSum", "practicePlace", "practicePoints", "totalTheoryPoints", "totalPracticePoints", "totalPoints", "finalPlace", "userId", "branchId", "nominationId") FROM stdin;
+6	8	00:45	1	3	0	00:00	0	1	3	3	3	6	1	32	3	6
 5	8	00:44	8	2	0	00:00	0	2	9	2	9	11	3	47	4	6
-6	8	00:45	9	1	0	00:00	0	1	12	1	12	13	2	32	3	6
 7	13	01:54	2	9	0	00:00	0	9	1	9	1	10	8	134	14	6
 2	18	01:48	1	12	0	00:00	0	8	2	12	2	14	1	126	12	6
 8	11	01:06	3	7	0	00:00	0	7	3	7	3	10	7	112	11	6
@@ -10701,6 +10702,9 @@ COPY public."UserLineNumber" (id, "userId", "practicNominationId", "lineNumber")
 6	95	5	1
 7	118	5	3
 8	105	5	4
+9	22	2	1
+10	109	4	1
+11	96	6	2
 \.
 
 
@@ -10778,7 +10782,7 @@ SELECT pg_catalog.setval('public."AvrSewerTask_id_seq"', 44, true);
 -- Name: BranchLineNumber_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."BranchLineNumber_id_seq"', 1, false);
+SELECT pg_catalog.setval('public."BranchLineNumber_id_seq"', 1, true);
 
 
 --
@@ -10792,7 +10796,7 @@ SELECT pg_catalog.setval('public."Branch_id_seq"', 14, true);
 -- Name: CarDriverTask_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."CarDriverTask_id_seq"', 265, true);
+SELECT pg_catalog.setval('public."CarDriverTask_id_seq"', 274, true);
 
 
 --
@@ -10862,14 +10866,14 @@ SELECT pg_catalog.setval('public."TestResult_id_seq"', 130, true);
 -- Name: TruckDriverTask_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."TruckDriverTask_id_seq"', 352, true);
+SELECT pg_catalog.setval('public."TruckDriverTask_id_seq"', 362, true);
 
 
 --
 -- Name: UserLineNumber_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."UserLineNumber_id_seq"', 8, true);
+SELECT pg_catalog.setval('public."UserLineNumber_id_seq"', 11, true);
 
 
 --
