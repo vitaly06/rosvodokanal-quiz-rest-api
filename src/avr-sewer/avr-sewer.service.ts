@@ -332,6 +332,7 @@ export class AvrSewerService {
         });
 
         return {
+          practicNominationId: practicNomination.id,
           branchId: branch.id,
           branchName: branch.address,
           lineNumber: lineNumber?.lineNumber ?? null,
