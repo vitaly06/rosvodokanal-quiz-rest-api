@@ -45,13 +45,13 @@ export class WelderService {
       result.push({
         branchName: user.fullName.branch.address,
         fullName: user.fullName.fullName,
-        theoryScore: theoryResults[0].score || 0,
+        theoryScore: theoryResults[0]?.score || 0,
         practiceScore: practicResults.reduce(
           (sum, elem) => (sum += elem.stageScore),
           0,
         ),
         totalScore:
-          (theoryResults[0].score || 0) +
+          (theoryResults[0]?.score || 0) +
           practicResults.reduce((sum, elem) => (sum += elem.stageScore), 0),
       });
     }
