@@ -2,6 +2,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateAvrSewerTaskDto } from './dto/avr-sewer-task.dto';
 import { Injectable } from '@nestjs/common';
 import { Branch } from '@prisma/client';
+import { time } from 'console';
 
 @Injectable()
 export class AvrSewerService {
@@ -93,6 +94,8 @@ export class AvrSewerService {
     const bestSeconds = this.timeToSeconds(bestTime);
     const worstSeconds = this.timeToSeconds(worstTime);
 
+    console.log(currentSeconds, bestSeconds, worstSeconds);
+
     // Если текущее время - лучшее, возвращаем максимальный балл
     if (currentTime === bestTime) return maxScore;
 
@@ -103,12 +106,19 @@ export class AvrSewerService {
     const scoreRange = maxScore - minScore;
     // Разница между худшим и лучшим временем в секундах
     const timeRange = worstSeconds - bestSeconds;
+
+    // Если все времена одинаковые (timeRange = 0), возвращаем средний балл
+    if (timeRange === 0) {
+      return (maxScore + minScore) / 2;
+    }
+
     // Стоимость одной секунды в баллах
     const scorePerSecond = scoreRange / timeRange;
     // Разница между текущим и лучшим временем
     const timeDiff = currentSeconds - bestSeconds;
-    // Расчет балла
+    // Расчет балла: minScore + (оставшееся время от худшего) * scorePerSecond
     const score = maxScore - timeDiff * scorePerSecond;
+
     // Гарантируем, что балл в пределах диапазона
     return Math.max(minScore, Math.min(maxScore, Number(score.toFixed(2))));
   }
@@ -252,7 +262,7 @@ export class AvrSewerService {
       where: { nominationId: nomination.id },
     });
 
-    // Пересчет баллов для всех задач
+    // Пересчет баллов для всех задач - ТЕПЕРЬ ТАК ЖЕ КАК В AVR_MECHANIC
     for (let stage = 1; stage <= 4; stage++) {
       const stageTasks = allTasks.filter(
         (t) => t.taskNumber === stage && t.time !== '00:00',
@@ -266,13 +276,12 @@ export class AvrSewerService {
           (a, b) => this.timeToSeconds(a.time) - this.timeToSeconds(b.time),
         );
 
-        // Рассчитываем баллы по новой методике
+        // Рассчитываем баллы по ТОЙ ЖЕ методике, что и в AvrMechanic
         const bestTime = sortedTasks[0].time;
         const worstTime = sortedTasks[sortedTasks.length - 1].time;
         const scoreRange = maxScore - minScore;
         const timeRange =
           this.timeToSeconds(worstTime) - this.timeToSeconds(bestTime);
-        const scorePerSecond = timeRange > 0 ? scoreRange / timeRange : 0;
 
         sortedTasks.forEach((task, index) => {
           if (index === 0) {
@@ -282,15 +291,21 @@ export class AvrSewerService {
             // Худший результат - минимальный балл
             task.timeScore = minScore;
           } else {
-            // Для промежуточных результатов
-            const prevTime = this.timeToSeconds(sortedTasks[index - 1].time);
-            const currentTime = this.timeToSeconds(task.time);
-            const timeDiff = currentTime - prevTime;
-            task.timeScore =
-              sortedTasks[index - 1].timeScore - timeDiff * scorePerSecond;
-            // Округляем до 2 знаков после запятой
-            task.timeScore = Number(task.timeScore.toFixed(2));
+            // Для промежуточных результатов используем линейную интерполяцию
+            const currentSeconds = this.timeToSeconds(task.time);
+            const bestSeconds = this.timeToSeconds(bestTime);
+
+            // Линейная интерполяция: score = maxScore - (currentSeconds - bestSeconds) * (scoreRange / timeRange)
+            const timeDiff = currentSeconds - bestSeconds;
+            const scorePerSecond = timeRange > 0 ? scoreRange / timeRange : 0;
+            task.timeScore = maxScore - timeDiff * scorePerSecond;
           }
+
+          // Гарантируем, что балл в пределах диапазона
+          task.timeScore = Math.max(
+            minScore,
+            Math.min(maxScore, Number(task.timeScore.toFixed(2))),
+          );
 
           task.stageScore = this.calculateStageScore(
             task.timeScore,

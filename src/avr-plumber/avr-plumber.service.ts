@@ -82,9 +82,9 @@ export class AvrPlumberService {
       },
     });
 
-    if (!user || user.TestResult.length === 0) {
-      throw new Error('Участник не найден или не проходил тест по номинации');
-    }
+    // if (!user || user.TestResult.length === 0) {
+    //   throw new Error('Участник не найден или не проходил тест по номинации');
+    // }
 
     const nomination = await this.prisma.nomination.findFirst({
       where: { name: 'Слесарь АВР' },
@@ -182,11 +182,11 @@ export class AvrPlumberService {
     // Get all participants with their results
     const participants = await this.prisma.user.findMany({
       where: {
-        TestResult: {
-          some: {
-            nominationId: nomination.id,
-          },
-        },
+        // TestResult: {
+        //   some: {
+        //     nominationId: nomination.id,
+        //   },
+        // },
         fullName: {
           participatingNominations: {
             has: practicNomination.id,
@@ -202,6 +202,8 @@ export class AvrPlumberService {
         },
       },
     });
+
+    console.log(participants);
 
     // Get all tasks for score calculation
     const allTasks = await this.prisma.avrPlumberTask.findMany({
@@ -305,6 +307,8 @@ export class AvrPlumberService {
       },
       include: { fullName: { include: { branch: true } } },
     });
+
+    console.log(users);
 
     const result = await Promise.all(
       users.map(async (user) => {

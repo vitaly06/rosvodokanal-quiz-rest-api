@@ -166,22 +166,34 @@ export class WelderService {
       throw new Error('Номинация "Сварщик" не найдена');
     }
 
-    const branches = await this.prisma.branch.findMany({
+    if (!practicNomination) {
+      throw new Error('Практическая номинация "Лучший сварщик" не найдена');
+    }
+
+    // Получаем всех пользователей, у которых в fullName.participatingNominations есть practicNomination.id
+    const users = await this.prisma.user.findMany({
       where: {
-        participatingNominations: {
-          has: practicNomination.id,
+        fullName: {
+          participatingNominations: {
+            has: practicNomination.id,
+          },
+        },
+      },
+      include: {
+        fullName: {
+          include: {
+            branch: true,
+          },
         },
       },
     });
+
+    // Получаем testResults для всех пользователей из выборки
     const testResults = await this.prisma.testResult.findMany({
       where: {
         nominationId: nomination.id,
-        user: {
-          fullName: {
-            participatingNominations: {
-              has: practicNomination.id,
-            },
-          },
+        userId: {
+          in: users.map((user) => user.id),
         },
       },
       include: {
@@ -196,143 +208,184 @@ export class WelderService {
     const welderTasks = await this.prisma.welderTask.findMany({
       where: {
         nominationId: nomination.id,
+        userId: {
+          in: users.map((user) => user.id),
+        },
       },
     });
-    let result = await Promise.all(
-      branches
-        .map((branch) => {
-          const branchParticipants = testResults
-            .filter((result) => result.user?.fullName.branchId === branch.id)
-            .map((result) => result.user);
 
-          if (branchParticipants.length === 0) {
+    const result = await Promise.all(
+      users.map(async (user) => {
+        // Находим testResult для текущего пользователя
+        const userTestResult = testResults.find(
+          (result) => result.userId === user.id,
+        );
+
+        // Находим задачи для текущего пользователя
+        const participantTasks = welderTasks.filter(
+          (task) => task.userId === user.id,
+        );
+
+        const stages = [1, 2].map((taskNumber) => {
+          const task =
+            participantTasks.find((t) => t.taskNumber === taskNumber) ||
+            this.createEmptyStage(taskNumber);
+
+          if (taskNumber === 1) {
             return {
-              branchId: branch.id,
-              branchName: branch.address,
-              participantName: 'Нет данных',
-              stages: [this.createEmptyStage(1), this.createEmptyStage(2)],
-              total: 0,
+              taskNumber,
+              time: task.time || '00:00',
+              timeScore: task.timeScore || 0,
+              hydraulicTest: false,
+              safetyPenalty: task.safetyPenalty || 0,
+              culturePenalty: task.culturePenalty || 0,
+              qualityPenalty: 0,
+              stageScore: task.stageScore || 0,
+              operationalControl: task.operationalControl || 0,
+              visualMeasurement: task.visualMeasurement || 0,
+              radiographicControl: task.radiographicControl || 0,
             };
           }
-          // let penalty = 0;
-          return branchParticipants.map(async (user) => {
-            const participantTasks = welderTasks.filter(
-              (task) => task.userId === user.id,
-            );
-            const stages = [1, 2].map((taskNumber) => {
-              const task =
-                participantTasks.find((t) => t.taskNumber === taskNumber) ||
-                this.createEmptyStage(taskNumber);
-              if (taskNumber == 1) {
-                // penalty =
-                //   (task.operationalControl || 0) +
-                //   (task.visualMeasurement || 0) +
-                //   (task.radiographicControl || 0);
-                return {
-                  taskNumber,
-                  time: task.time || '00:00',
-                  timeScore: task.timeScore,
-                  hydraulicTest: false,
-                  safetyPenalty: task.safetyPenalty,
-                  culturePenalty: task.culturePenalty,
-                  qualityPenalty: 0,
-                  stageScore: task.stageScore,
-                  operationalControl: task.operationalControl || 0, // Операционный контроль
-                  visualMeasurement: task.visualMeasurement || 0, // Визуально-измерительный контроль
-                  radiographicControl: task.radiographicControl || 0, // Радиографический контроль
-                };
-              }
-              return {
-                taskNumber,
-                time: task.time || '00:00',
-                timeScore: task.timeScore,
-                hydraulicTest: false,
-                safetyPenalty: task.safetyPenalty,
-                culturePenalty: task.culturePenalty,
-                qualityPenalty: 0,
-                stageScore: task.stageScore,
-              };
-            });
 
-            const lineNumber = await this.prisma.userLineNumber.findUnique({
-              where: {
-                user_practic_line_unique: {
-                  userId: user.id,
-                  practicNominationId: practicNomination.id,
-                },
-              },
-            });
+          return {
+            taskNumber,
+            time: task.time || '00:00',
+            timeScore: task.timeScore || 0,
+            hydraulicTest: false,
+            safetyPenalty: task.safetyPenalty || 0,
+            culturePenalty: task.culturePenalty || 0,
+            qualityPenalty: 0,
+            stageScore: task.stageScore || 0,
+          };
+        });
 
-            const practiceScore =
-              stages.reduce((sum, stage) => sum + stage.stageScore, 0) -
-              stages.reduce(
-                (sum, stage) =>
-                  (sum +=
-                    (stage?.operationalControl || 0) +
-                    (stage?.visualMeasurement || 0) +
-                    (stage?.radiographicControl || 0)),
-                0,
-              );
-
-            const theoryScore = await this.getTheoryScore(
-              user.id,
-              nomination.id,
-            );
-
-            return {
-              branchId: branch.id,
-              practicNominationId: practicNomination.id,
-              lineNumber: lineNumber?.lineNumber || null,
-              branchName: branch.address,
+        // Получаем номер линии для пользователя
+        const lineNumber = await this.prisma.userLineNumber.findUnique({
+          where: {
+            user_practic_line_unique: {
               userId: user.id,
-              participantName: user.fullName.fullName || 'Неизвестный участник',
-              stages,
-              theoryScore,
-              practiceScore,
-              total: theoryScore + practiceScore,
-            };
-          });
-        })
-        .flat(),
+              practicNominationId: practicNomination.id,
+            },
+          },
+        });
+
+        // Рассчитываем практический балл
+        const practiceScore = Math.max(
+          0,
+          stages.reduce((sum, stage) => sum + (stage.stageScore || 0), 0) -
+            stages.reduce(
+              (sum, stage) =>
+                sum +
+                ((stage.operationalControl || 0) +
+                  (stage.visualMeasurement || 0) +
+                  (stage.radiographicControl || 0)),
+              0,
+            ),
+        );
+
+        // Получаем теоретический балл
+        const theoryScore = await this.getTheoryScore(
+          String(user.id),
+          String(nomination.id),
+        );
+
+        return {
+          branchId: user.fullName.branch?.id || null,
+          practicNominationId: practicNomination.id,
+          lineNumber: lineNumber?.lineNumber || null,
+          branchName: user.fullName.branch?.address || 'Неизвестный филиал',
+          userId: user.id,
+          participantName: user.fullName.fullName || 'Неизвестный участник',
+          stages,
+          theoryScore: theoryScore || 0,
+          practiceScore,
+          total: (theoryScore || 0) + practiceScore,
+        };
+      }),
     );
 
-    result = result
+    // Сортируем по убыванию общего балла и добавляем места
+    const sortedResult = result
       .sort((a, b) => b.total - a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
 
-    return result.sort((a, b) =>
+    // Дополнительная сортировка по имени участника
+    return sortedResult.sort((a, b) =>
       a.participantName.localeCompare(b.participantName),
     );
   }
 
   private createEmptyStage(taskNumber: number): any {
-    const returnedData = {
+    const baseData = {
       taskNumber,
       time: '00:00',
-      timeScore: taskNumber == 1 ? 40 : 70,
+      timeScore: taskNumber === 1 ? 40 : 70,
       hydraulicTest: false,
       safetyPenalty: 0,
       culturePenalty: 0,
       qualityPenalty: 0,
-      stageScore: taskNumber == 1 ? 40 : 70,
+      stageScore: taskNumber === 1 ? 40 : 70,
     };
-    if (taskNumber == 1) {
-      returnedData['operationalControl'] = 0;
-      returnedData['visualMeasurement'] = 0;
-      returnedData['radiographicControl'] = 0;
+
+    if (taskNumber === 1) {
+      return {
+        ...baseData,
+        operationalControl: 0,
+        visualMeasurement: 0,
+        radiographicControl: 0,
+      };
     }
 
-    return returnedData;
+    return baseData;
   }
 
-  async getTheoryScore(userId: number, nominationId: number) {
-    const theoryResults = await this.prisma.testResult.findMany({
-      where: {
-        userId,
-        nominationId,
-      },
-    });
+  private async getTheoryScore(userId: string, nominationId: string) {
+    try {
+      const testResult = await this.prisma.testResult.findFirst({
+        where: {
+          userId: +userId,
+          nominationId: +nominationId,
+        },
+        select: {
+          score: true,
+        },
+      });
 
-    return theoryResults[0].score || 0;
+      return testResult?.score || 0;
+    } catch (error) {
+      console.error('Error getting theory score:', error);
+      return 0;
+    }
   }
+
+  // private createEmptyStage(taskNumber: number): any {
+  //   const returnedData = {
+  //     taskNumber,
+  //     time: '00:00',
+  //     timeScore: taskNumber == 1 ? 40 : 70,
+  //     hydraulicTest: false,
+  //     safetyPenalty: 0,
+  //     culturePenalty: 0,
+  //     qualityPenalty: 0,
+  //     stageScore: taskNumber == 1 ? 40 : 70,
+  //   };
+  //   if (taskNumber == 1) {
+  //     returnedData['operationalControl'] = 0;
+  //     returnedData['visualMeasurement'] = 0;
+  //     returnedData['radiographicControl'] = 0;
+  //   }
+
+  //   return returnedData;
+  // }
+
+  // async getTheoryScore(userId: number, nominationId: number) {
+  //   const theoryResults = await this.prisma.testResult.findMany({
+  //     where: {
+  //       userId,
+  //       nominationId,
+  //     },
+  //   });
+
+  //   return theoryResults[0].score || 0;
+  // }
 }

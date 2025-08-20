@@ -79,9 +79,9 @@ export class AvrSewerPlumberService {
       },
     });
 
-    if (!user || user.TestResult.length === 0) {
-      throw new Error('Участник не найден или не проходил тест по номинации');
-    }
+    // if (!user || user.TestResult.length === 0) {
+    //   throw new Error('Участник не найден или не проходил тест по номинации');
+    // }
 
     const nomination = await this.prisma.nomination.findFirst({
       where: { name: 'Слесарь АВР' },
@@ -183,11 +183,11 @@ export class AvrSewerPlumberService {
     // Get all participants with their results
     const participants = await this.prisma.user.findMany({
       where: {
-        TestResult: {
-          some: {
-            nominationId: nomination.id,
-          },
-        },
+        // TestResult: {
+        //   some: {
+        //     nominationId: nomination.id,
+        //   },
+        // },
         fullName: {
           participatingNominations: {
             has: practicNomination.id,
@@ -309,6 +309,8 @@ export class AvrSewerPlumberService {
       include: { fullName: { include: { branch: true } } },
     });
 
+    console.log(users);
+
     const result = await Promise.all(
       users.map(async (user) => {
         const theoryResults = await this.prisma.testResult.findMany({
@@ -321,7 +323,7 @@ export class AvrSewerPlumberService {
 
         return {
           branchName: user.fullName.branch.address,
-          fullName: user.fullName,
+          fullName: user.fullName.fullName,
           theoryScore: theoryResults[0]?.score || 0,
           practiceScore: practicResults.reduce(
             (sum, elem) => sum + elem.stageScore,
