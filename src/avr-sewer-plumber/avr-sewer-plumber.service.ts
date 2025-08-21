@@ -272,20 +272,20 @@ export class AvrSewerPlumberService {
           participantName: user.fullName.fullName || `Участник ${user.id}`,
           number: user.number,
           time: task?.time || '00:00',
-          timeScore,
+          timeScore: timeScore.toFixed(2),
           hydraulicTest: task?.hydraulicTest || false,
           safetyPenalty: task?.safetyPenalty || 0,
           culturePenalty: task?.culturePenalty || 0,
           qualityPenalty: task?.qualityPenalty || 0,
-          theoryScore,
-          practiceScore,
-          total: theoryScore + practiceScore,
+          theoryScore: theoryScore.toFixed(2),
+          practiceScore: practiceScore.toFixed(2),
+          total: (theoryScore + practiceScore).toFixed(2),
         };
       }),
     );
 
     tableData = tableData
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => +b.total - +a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
 
     return tableData.sort((a, b) =>
@@ -324,20 +324,20 @@ export class AvrSewerPlumberService {
         return {
           branchName: user.fullName.branch.address,
           fullName: user.fullName.fullName,
-          theoryScore: theoryResults[0]?.score || 0,
-          practiceScore: practicResults.reduce(
-            (sum, elem) => sum + elem.stageScore,
-            0,
-          ),
-          totalScore:
+          theoryScore: (theoryResults[0]?.score || 0).toFixed(2),
+          practiceScore: practicResults
+            .reduce((sum, elem) => sum + elem.stageScore, 0)
+            .toFixed(2),
+          totalScore: (
             (theoryResults[0]?.score || 0) +
-            practicResults.reduce((sum, elem) => sum + elem.stageScore, 0),
+            practicResults.reduce((sum, elem) => sum + elem.stageScore, 0)
+          ).toFixed(2),
         };
       }),
     );
 
     return result
-      .sort((a, b) => b.totalScore - a.totalScore)
+      .sort((a, b) => +b.totalScore - +a.totalScore)
       .map((item, index) => ({ ...item, place: index + 1 }));
   }
 

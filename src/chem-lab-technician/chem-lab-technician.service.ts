@@ -354,41 +354,41 @@ export class ChemLabTechnicianService {
             {
               name: '1a',
               time: task?.stage1aTime || '00:00',
-              timeScore: task?.stage1aTimeScore || 0,
+              timeScore: (task?.stage1aTimeScore || 0).toFixed(2),
               quality: task?.stage1aQuality || 0,
               culture: task?.stage1aCulture || 0,
               safety: task?.stage1aSafety || 0,
-              total: task?.stage1aTotal || 0,
+              total: (task?.stage1aTotal || 0).toFixed(2),
             },
             {
               name: '1b',
               time: task?.stage1bTime || '00:00',
-              timeScore: task?.stage1bTimeScore || 0,
+              timeScore: (task?.stage1bTimeScore || 0).toFixed(2),
               quality: task?.stage1bQuality || 0,
               culture: task?.stage1bCulture || 0,
               safety: task?.stage1bSafety || 0,
-              total: task?.stage1bTotal || 0,
+              total: (task?.stage1bTotal || 0).toFixed(2),
             },
             {
               name: '2',
               time: task?.stage2Time || '00:00',
-              timeScore: task?.stage2TimeScore || 0,
+              timeScore: (task?.stage2TimeScore || 0).toFixed(2),
               quality: task?.stage2Quality || 0,
               culture: task?.stage2Culture || 0,
               safety: task?.stage2Safety || 0,
-              total: task?.stage2Total || 0,
+              total: (task?.stage2Total || 0).toFixed(2),
             },
           ],
-          theoryScore,
-          practiceScore: task?.totalPoints || 0,
-          total: theoryScore + (task?.totalPoints || 0),
+          theoryScore: theoryScore.toFixed(2),
+          practiceScore: (task?.totalPoints || 0).toFixed(2),
+          total: (theoryScore + (task?.totalPoints || 0)).toFixed(2),
           // place: task?.finalPlace || null,
         };
       }),
     );
 
     result = result
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => +b.total - +a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
 
     return result.sort((a, b) =>
@@ -425,16 +425,17 @@ export class ChemLabTechnicianService {
         return {
           branchName: user.fullName.branch.address,
           fullName: user.fullName.fullName,
-          theoryScore: theoryResults[0]?.score || 0,
-          practiceScore: practicResults?.totalPoints || 0,
-          totalScore:
-            (theoryResults[0]?.score || 0) + (practicResults?.totalPoints || 0),
+          theoryScore: (theoryResults[0]?.score || 0).toFixed(2),
+          practiceScore: (practicResults?.totalPoints || 0).toFixed(2),
+          totalScore: (
+            (theoryResults[0]?.score || 0) + (practicResults?.totalPoints || 0)
+          ).toFixed(2),
         };
       }),
     );
 
     return result
-      .sort((a, b) => b.totalScore - a.totalScore)
+      .sort((a, b) => +b.totalScore - +a.totalScore)
       .map((item, index) => ({ ...item, place: index + 1 }));
   }
 

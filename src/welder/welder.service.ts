@@ -134,7 +134,7 @@ export class WelderService {
         operationalControl: dto.operationalControl,
         visualMeasurement: dto.visualMeasurement,
         radiographicControl: dto.radiographicControl,
-        stageScore: timeScore,
+        stageScore: timeScore - dto.culturePenalty - dto.safetyPenalty,
       },
       create: {
         branchId: dto.branchId,
@@ -148,7 +148,7 @@ export class WelderService {
         operationalControl: dto.operationalControl ?? 0,
         visualMeasurement: dto.visualMeasurement ?? 0,
         radiographicControl: dto.radiographicControl ?? 0,
-        stageScore: timeScore,
+        stageScore: timeScore - dto.culturePenalty - dto.safetyPenalty,
       },
     });
   }
@@ -268,7 +268,6 @@ export class WelderService {
             },
           },
         });
-
         // Рассчитываем практический балл
         const practiceScore = Math.max(
           0,
@@ -297,6 +296,9 @@ export class WelderService {
           userId: user.id,
           participantName: user.fullName.fullName || 'Неизвестный участник',
           stages,
+          totalStages: stages
+            .reduce((sum, stage) => sum + stage.stageScore || 0, 0)
+            .toFixed(2),
           theoryScore: theoryScore || 0,
           practiceScore,
           total: (theoryScore || 0) + practiceScore,

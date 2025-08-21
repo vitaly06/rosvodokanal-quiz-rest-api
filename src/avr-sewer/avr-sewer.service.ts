@@ -71,14 +71,14 @@ export class AvrSewerService {
       result.push({
         branchName: branch.address,
         team: team.map((user) => user.fullName.fullName),
-        theoryScore,
-        practiceScore,
-        totalScore: theoryScore + practiceScore,
+        theoryScore: theoryScore.toFixed(2),
+        practiceScore: practiceScore.toFixed(2),
+        totalScore: (+theoryScore + +practiceScore).toFixed(2),
       });
     }
 
     return result
-      .sort((a, b) => b.totalScore - a.totalScore)
+      .sort((a, b) => +b.totalScore - +a.totalScore)
       .map((item, index) => ({ ...item, place: index + 1 }));
   }
 
@@ -178,7 +178,7 @@ export class AvrSewerService {
       // Если нет валидных времен, используем минимальный балл
       timeScore = minScore;
     }
-
+    console.log(dto);
     const stageScore = dto.hydraulicTest
       ? this.calculateStageScore(
           timeScore,
@@ -187,6 +187,8 @@ export class AvrSewerService {
           dto.qualityPenalty ?? 0,
         )
       : 0;
+
+    console.log(stageScore);
 
     return this.prisma.avrSewerTask.upsert({
       where: {
@@ -203,7 +205,7 @@ export class AvrSewerService {
         safetyPenalty: dto.safetyPenalty,
         culturePenalty: dto.culturePenalty,
         qualityPenalty: dto.qualityPenalty,
-        stageScore: +stageScore,
+        stageScore: stageScore,
       },
       create: {
         branchId: dto.branchId,
@@ -215,7 +217,7 @@ export class AvrSewerService {
         safetyPenalty: dto.safetyPenalty ?? 0,
         culturePenalty: dto.culturePenalty ?? 0,
         qualityPenalty: dto.qualityPenalty ?? 0,
-        stageScore: +stageScore,
+        stageScore: stageScore,
       },
     });
   }
@@ -304,13 +306,16 @@ export class AvrSewerService {
             minScore,
             Math.min(maxScore, Number(task.timeScore.toFixed(2))),
           );
-
-          task.stageScore = this.calculateStageScore(
-            task.timeScore,
-            task.safetyPenalty,
-            task.culturePenalty,
-            task.qualityPenalty,
-          );
+          if (task.hydraulicTest) {
+            task.stageScore = this.calculateStageScore(
+              task.timeScore,
+              task.safetyPenalty,
+              task.culturePenalty,
+              task.qualityPenalty,
+            );
+          } else {
+            task.stageScore = 0;
+          }
         });
       }
     }
