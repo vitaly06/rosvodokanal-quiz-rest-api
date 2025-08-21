@@ -109,10 +109,10 @@ export class StatisticService {
       filterResults['testResults'].push({
         userId: item.user.id,
         number: item.user.number,
-        fullName: item.user.fullName.fullName,
+        fullName: item.user?.fullName?.fullName || null,
         nominationId: item.nomination.id,
         nomination: item.nomination.name,
-        branch: item.user.fullName.branch?.address || 'Филиал не указан',
+        branch: item.user?.fullName?.branch?.address || 'Филиал не указан',
         date: item.duration,
         result: `${item.score}/${item.total}`,
         percentage: item.percentage,

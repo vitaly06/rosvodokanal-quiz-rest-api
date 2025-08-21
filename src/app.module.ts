@@ -25,6 +25,7 @@ import { ChemLabTechnicianModule } from './chem-lab-technician/chem-lab-technici
 import { BranchLineNumberModule } from './branch-line-number/branch-line-number.module';
 import { UserLineNumberModule } from './user-line-number/user-line-number.module';
 import { FullNameModule } from './full-name/full-name.module';
+import { UtilsModule } from './utils/utils.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { FullNameModule } from './full-name/full-name.module';
     BranchLineNumberModule,
     UserLineNumberModule,
     FullNameModule,
+    UtilsModule,
   ],
   controllers: [AppController],
   providers: [],

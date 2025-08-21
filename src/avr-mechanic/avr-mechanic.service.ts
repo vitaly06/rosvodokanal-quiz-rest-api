@@ -71,23 +71,22 @@ export class AvrMechanicService {
       result.push({
         branchName: branch.address,
         team: team.map((elem) => elem.fullName.fullName),
-        theoryScore:
-          theoryResults.length != 0
-            ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
-            : 0,
-        practiceScore: Number(
-          practicResults
-            .reduce((sum, elem) => (sum += elem.stageScore), 0)
-            .toFixed(2),
-        ),
-        totalScore:
-          (theoryResults.length != 0
-            ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
-            : 0) +
-          practicResults.reduce((sum, elem) => (sum += elem.stageScore), 0),
+        theoryScore: (theoryResults.length != 0
+          ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
+          : 0
+        ).toFixed(2),
+        practiceScore: practicResults
+          .reduce((sum, elem) => (sum += elem.stageScore), 0)
+          .toFixed(2),
+
+        totalScore: (theoryResults.length != 0
+          ? theoryResults.reduce((sum, elem) => (sum += elem.score), 0)
+          : 0 +
+            practicResults.reduce((sum, elem) => (sum += elem.stageScore), 0)
+        ).toFixed(2),
       });
     }
-    result = result.sort((a, b) => b.totalScore - a.totalScore);
+    result = result.sort((a, b) => Number(b.totalScore) - Number(a.totalScore));
     for (let i = 0; i < result.length; i++) {
       result[i].place = i + 1;
     }
@@ -295,18 +294,18 @@ export class AvrMechanicService {
               task || {
                 taskNumber: i + 1,
                 time: '00:00',
-                timeScore: 0,
+                timeScore: '0.0',
                 hydraulicTest: false,
                 safetyPenalty: 0,
                 culturePenalty: 0,
                 qualityPenalty: 0,
-                stageScore: 0,
+                stageScore: '0.00',
               }
             );
           });
 
         const practiceScore = stages.reduce(
-          (sum, stage) => sum + stage.stageScore,
+          (sum, stage) => sum + Number(stage.stageScore),
           0,
         );
 
@@ -332,17 +331,19 @@ export class AvrMechanicService {
           branchName: branch.address,
           stages: stages.map((stage) => ({
             ...stage,
+            timeScore: Number(stage.timeScore).toFixed(2),
             time: stage.time || '00:00',
+            stageScore: Number(stage.stageScore).toFixed(2),
           })),
-          practiceScore,
-          theoryScore,
-          total: theoryScore + practiceScore,
+          practiceScore: practiceScore.toFixed(2),
+          theoryScore: practiceScore.toFixed(2),
+          total: Number(theoryScore + practiceScore).toFixed(2),
         };
       }),
     );
 
     result = result
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => Number(b.total) - Number(a.total))
       .map((item, index) => ({ ...item, place: index + 1 }));
 
     return result.sort((a, b) => a.branchName.localeCompare(b.branchName));

@@ -2,7 +2,6 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateAvrSewerTaskDto } from './dto/avr-sewer-task.dto';
 import { Injectable } from '@nestjs/common';
 import { Branch } from '@prisma/client';
-import { time } from 'console';
 
 @Injectable()
 export class AvrSewerService {
@@ -204,7 +203,7 @@ export class AvrSewerService {
         safetyPenalty: dto.safetyPenalty,
         culturePenalty: dto.culturePenalty,
         qualityPenalty: dto.qualityPenalty,
-        stageScore,
+        stageScore: +stageScore,
       },
       create: {
         branchId: dto.branchId,
@@ -216,7 +215,7 @@ export class AvrSewerService {
         safetyPenalty: dto.safetyPenalty ?? 0,
         culturePenalty: dto.culturePenalty ?? 0,
         qualityPenalty: dto.qualityPenalty ?? 0,
-        stageScore,
+        stageScore: +stageScore,
       },
     });
   }
@@ -236,7 +235,7 @@ export class AvrSewerService {
     safetyPenalty: number,
     culturePenalty: number,
     qualityPenalty: number,
-  ): number {
+  ) {
     return Math.max(
       0,
       timeScore - safetyPenalty - culturePenalty - qualityPenalty,
@@ -262,7 +261,6 @@ export class AvrSewerService {
       where: { nominationId: nomination.id },
     });
 
-    // Пересчет баллов для всех задач - ТЕПЕРЬ ТАК ЖЕ КАК В AVR_MECHANIC
     for (let stage = 1; stage <= 4; stage++) {
       const stageTasks = allTasks.filter(
         (t) => t.taskNumber === stage && t.time !== '00:00',
@@ -327,7 +325,7 @@ export class AvrSewerService {
         );
 
         const practiceScore = stages.reduce(
-          (sum, stage) => sum + stage.stageScore,
+          (sum, stage) => sum + +stage.stageScore,
           0,
         );
 
@@ -351,16 +349,26 @@ export class AvrSewerService {
           branchId: branch.id,
           branchName: branch.address,
           lineNumber: lineNumber?.lineNumber ?? null,
-          stages,
-          practiceScore,
-          theoryScore,
-          total: practiceScore + theoryScore,
+          stages: stages.map((stage) => ({
+            ...stage,
+            timeScore:
+              typeof stage.timeScore === 'number'
+                ? stage.timeScore.toFixed(2)
+                : stage.timeScore,
+            stageScore:
+              typeof stage.stageScore === 'number'
+                ? stage.stageScore.toFixed(2)
+                : stage.stageScore,
+          })),
+          practiceScore: practiceScore.toFixed(2),
+          theoryScore: theoryScore.toFixed(2),
+          total: (+practiceScore + +theoryScore).toFixed(2),
         };
       }),
     );
 
     result = result
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => +b.total - +a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
 
     return result.sort((a, b) => a.branchName.localeCompare(b.branchName));
@@ -370,12 +378,12 @@ export class AvrSewerService {
     return {
       taskNumber,
       time: '00:00',
-      timeScore: 0,
+      timeScore: '0.00',
       hydraulicTest: true,
       safetyPenalty: 0,
       culturePenalty: 0,
       qualityPenalty: 0,
-      stageScore: 0,
+      stageScore: '0.00',
     };
   }
 
