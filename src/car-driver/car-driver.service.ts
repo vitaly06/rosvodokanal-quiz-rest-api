@@ -171,11 +171,6 @@ export class CarDriverService {
             has: practicNomination.id,
           },
         },
-        // TestResult: {
-        //   some: {
-        //     nominationId: nomination.id,
-        //   },
-        // },
       },
       include: {
         fullName: {
@@ -199,15 +194,14 @@ export class CarDriverService {
       },
     });
 
-    console.log(participants.length);
-
     // 1. Расчет теоретической части (ПДД)
+    // Включаем всех участников, даже без TestResult
     const theoryResults = participants
-      .filter((p) => p.TestResult.length > 0)
       .map((p) => ({
         userId: p.id,
-        theoryCorrect: p.TestResult[0].score,
-        theoryTime: p.TestResult[0].duration,
+        theoryCorrect: p.TestResult.length > 0 ? p.TestResult[0].score : 0,
+        theoryTime:
+          p.TestResult.length > 0 ? p.TestResult[0].duration : '99:99',
         user: p,
       }))
       .sort((a, b) => {
@@ -220,8 +214,6 @@ export class CarDriverService {
           this.timeToSeconds(a.theoryTime) - this.timeToSeconds(b.theoryTime)
         );
       });
-
-    console.log(theoryResults);
 
     // Присваиваем места для теории
     let currentTheoryPlace = 1;
@@ -254,15 +246,15 @@ export class CarDriverService {
     });
 
     // 2. Расчет практической части (маневрирование)
+    // Включаем всех участников, даже без CarDriverTask
     const practiceResults = participants
-      .filter((p) => p.CarDriverTask.length > 0)
       .map((p) => {
-        const task = p.CarDriverTask[0];
+        const task = p.CarDriverTask.length > 0 ? p.CarDriverTask[0] : null;
         return {
           userId: p.id,
-          practicePenalty: task.practicePenalty || 0,
-          practiceTime: task.practiceTime || '00:00',
-          practiceSum: task.practiceSum || 0, // Используем уже рассчитанную сумму
+          practicePenalty: task?.practicePenalty || 0,
+          practiceTime: task?.practiceTime || '99:99',
+          practiceSum: task?.practiceSum || 9999, // Большое число для тех, у кого нет результатов
           user: p,
         };
       })
@@ -273,7 +265,6 @@ export class CarDriverService {
     let prevPracticeSum = -1;
 
     const practiceResultsWithPlaces = practiceResults.map((result, index) => {
-      // Если текущая сумма отличается от предыдущей, увеличиваем место
       if (index > 0 && result.practiceSum !== prevPracticeSum) {
         currentPracticePlace = index + 1;
       }
@@ -285,6 +276,7 @@ export class CarDriverService {
         practiceResults.length -
         currentPracticePlace +
         this.getBonusPoints(currentPracticePlace);
+
       return {
         ...result,
         practicePlace: currentPracticePlace,
@@ -293,7 +285,6 @@ export class CarDriverService {
     });
 
     // 3. Объединение результатов
-    console.log(participants.length);
     const combinedResults = participants
       .map((p) => {
         const theory = theoryResultsWithPlaces.find((t) => t.userId === p.id);
@@ -312,15 +303,21 @@ export class CarDriverService {
           number: p.number,
           // Теория
           theoryCorrect: theory?.theoryCorrect || 0,
-          theoryTime: this.formatTimeToMMSS(theory?.theoryTime) || '00:00',
-          theoryPlace: theory?.theoryPlace || null,
+          theoryTime:
+            theory?.theoryTime === '99:99'
+              ? '00:00'
+              : this.formatTimeToMMSS(theory?.theoryTime) || '00:00',
+          theoryPlace: theory?.theoryPlace || practiceResults.length, // Последнее место если нет результатов
           theoryPoints: theory?.theoryPoints || 0,
           // Практика
           practicePenalty: practice?.practicePenalty || 0,
           practiceTime:
-            this.formatTimeToMMSS(practice?.practiceTime) || '00:00',
-          practiceSum: practice?.practiceSum || 0,
-          practicePlace: practice?.practicePlace || null,
+            practice?.practiceTime === '99:99'
+              ? '00:00'
+              : this.formatTimeToMMSS(practice?.practiceTime) || '00:00',
+          practiceSum:
+            practice?.practiceSum === 9999 ? 0 : practice?.practiceSum || 0,
+          practicePlace: practice?.practicePlace || practiceResults.length, // Последнее место если нет результатов
           practicePoints: practice?.practicePoints || 0,
           // Итоги
           totalTheoryPoints: theory?.theoryPoints || 0,

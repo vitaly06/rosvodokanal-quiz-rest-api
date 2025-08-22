@@ -301,15 +301,15 @@ export class WelderService {
             0,
           ),
           theoryScore: theoryScore || 0,
-          practiceScore,
-          total: (theoryScore || 0) + practiceScore,
+          practiceScore: practiceScore.toFixed(1),
+          total: ((theoryScore || 0) + practiceScore).toFixed(1),
         };
       }),
     );
 
     // Сортируем по убыванию общего балла и добавляем места
     const sortedResult = result
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => +b.total - +a.total)
       .map((item, index) => ({ ...item, place: index + 1 }));
 
     // Дополнительная сортировка по имени участника

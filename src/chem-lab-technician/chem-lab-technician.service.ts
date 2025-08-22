@@ -58,7 +58,7 @@ export class ChemLabTechnicianService {
     culture: number,
     safety: number,
   ): number {
-    return Math.max(0, timeScore - quality - culture - safety);
+    return timeScore - quality - culture - safety;
   }
 
   async updateTask(dto: UpdateChemLabTechnicianDto) {
@@ -302,11 +302,11 @@ export class ChemLabTechnicianService {
 
     const participants = await this.prisma.user.findMany({
       where: {
-        TestResult: {
-          some: {
-            nominationId: nomination.id,
-          },
-        },
+        // TestResult: {
+        //   some: {
+        //     nominationId: nomination.id,
+        //   },
+        // },
         fullName: {
           participatingNominations: {
             has: practicNomination.id,

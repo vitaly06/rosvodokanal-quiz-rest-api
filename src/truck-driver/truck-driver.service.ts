@@ -58,6 +58,10 @@ export class TruckDriverService {
     if (!timeString) {
       return '00:00';
     }
+
+    if (timeString.includes(':')) {
+      return timeString;
+    }
     const minutesMatch = timeString.match(/(\d+)\s*мин/);
     const secondsMatch = timeString.match(/(\d+)\s*сек/);
 
@@ -103,15 +107,28 @@ export class TruckDriverService {
       throw new Error('Пользователь не найден');
     }
 
-    const practiceTimeSeconds = this.timeToSeconds(dto.practiceTime || '00:00');
-    const practicePenalty = dto.practicePenalty || 0;
+    // Проверяем и корректно обрабатываем practiceTime
+    let practiceTime = '00:00';
+    if (dto.practiceTime && dto.practiceTime.trim() !== '') {
+      practiceTime = dto.practiceTime.trim();
+    }
+
+    // Проверяем и корректно обрабатываем practicePenalty
+    let practicePenalty = 0;
+    if (dto.practicePenalty !== undefined && dto.practicePenalty !== null) {
+      practicePenalty = Number(dto.practicePenalty);
+    }
+
+    const practiceTimeSeconds = this.timeToSeconds(practiceTime);
     const practiceSum = practiceTimeSeconds + practicePenalty;
 
     const updateData = {
       practicePenalty: practicePenalty,
-      practiceTime: dto.practiceTime || '00:00',
+      practiceTime: practiceTime, // Используем обработанное значение
       practiceSum: practiceSum,
     };
+
+    console.log('Update data:', updateData);
 
     const createData = {
       ...updateData,
@@ -130,7 +147,7 @@ export class TruckDriverService {
       finalPlace: null,
     };
 
-    await this.prisma.truckDriverTask.upsert({
+    const result = await this.prisma.truckDriverTask.upsert({
       where: {
         truck_driver_unique: {
           userId: dto.userId,
@@ -140,6 +157,21 @@ export class TruckDriverService {
       update: updateData,
       create: createData,
     });
+
+    console.log('Result:', result);
+
+    // Проверим что действительно записалось в БД
+    const verify = await this.prisma.truckDriverTask.findUnique({
+      where: {
+        truck_driver_unique: {
+          userId: dto.userId,
+          nominationId: nomination.id,
+        },
+      },
+    });
+
+    console.log('Verified in DB:', verify);
+    return result;
   }
 
   private getBonusPoints(place: number): number {
@@ -165,6 +197,9 @@ export class TruckDriverService {
           participatingNominations: {
             has: practicNomination.id,
           },
+        },
+        TestResult: {
+          some: { nominationId: nomination.id },
         },
       },
       include: {
@@ -193,8 +228,8 @@ export class TruckDriverService {
       .filter((p) => p.TestResult.length > 0)
       .map((p) => ({
         userId: p.id,
-        theoryCorrect: p.TestResult[0].score,
-        theoryTime: p.TestResult[0].duration,
+        theoryCorrect: p.TestResult[0].score || 0,
+        theoryTime: p.TestResult[0].duration || '99:99',
         user: p,
       }))
       .sort((a, b) => {
@@ -246,15 +281,22 @@ export class TruckDriverService {
           user: p,
         };
       })
-      .sort((a, b) => a.practiceSum - b.practiceSum);
-
+      .sort((a, b) => {
+        if (b.practiceSum != a.practiceSum) {
+          return a.practiceSum - b.practiceSum;
+        }
+        return (
+          this.timeToSeconds(a.practiceTime) -
+          this.timeToSeconds(b.practiceTime)
+        );
+      });
     let currentPracticePlace = 1;
     let prevPracticeSum = -1;
 
     const practiceResultsWithPlaces = practiceResults.map((result, index) => {
-      if (index > 0 && result.practiceSum !== prevPracticeSum) {
-        currentPracticePlace = index + 1;
-      }
+      // if (index > 0 && result.practiceSum !== prevPracticeSum) {
+      currentPracticePlace = index + 1;
+      // }
 
       prevPracticeSum = result.practiceSum;
 
@@ -279,7 +321,7 @@ export class TruckDriverService {
 
         const totalPoints =
           (theory?.theoryPoints || 0) + (practice?.practicePoints || 0);
-
+        console.log(this.formatTimeToMMSS(practice?.practiceTime));
         return {
           userId: p.id,
           branchId: p.fullName.branchId,
@@ -309,6 +351,8 @@ export class TruckDriverService {
 
     await Promise.all(
       combinedResults.map(async (res) => {
+        // console.log(res.practiceTime);
+
         return await this.prisma.truckDriverTask.upsert({
           where: {
             truck_driver_unique: {
@@ -316,6 +360,7 @@ export class TruckDriverService {
               nominationId: nomination.id,
             },
           },
+
           update: {
             theoryCorrect: res.theoryCorrect,
             theoryTime: res.theoryTime,
@@ -403,6 +448,8 @@ export class TruckDriverService {
             },
           },
         });
+
+        console.log(task.practiceTime);
 
         return {
           id: task.id,

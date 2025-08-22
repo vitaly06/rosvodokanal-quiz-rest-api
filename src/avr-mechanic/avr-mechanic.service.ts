@@ -336,7 +336,7 @@ export class AvrMechanicService {
             stageScore: Number(stage.stageScore).toFixed(2),
           })),
           practiceScore: practiceScore.toFixed(2),
-          theoryScore: practiceScore.toFixed(2),
+          theoryScore: theoryScore.toFixed(2),
           total: Number(theoryScore + practiceScore).toFixed(2),
         };
       }),
