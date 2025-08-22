@@ -103,9 +103,15 @@ export class CarDriverService {
       throw new Error('Пользователь не найден');
     }
 
+    // Конвертируем время в секунды и вычисляем сумму
+    const practiceTimeSeconds = this.timeToSeconds(dto.practiceTime || '00:00');
+    const practicePenalty = dto.practicePenalty || 0;
+    const practiceSum = practiceTimeSeconds + practicePenalty;
+
     const updateData = {
-      practicePenalty: dto.practicePenalty ?? 0,
-      practiceTime: dto.practiceTime ?? '00:00',
+      practicePenalty: practicePenalty,
+      practiceTime: dto.practiceTime || '00:00',
+      practiceSum: practiceSum, // Добавляем расчет суммы
     };
 
     const createData = {
@@ -117,7 +123,6 @@ export class CarDriverService {
       theoryTime: '00:00',
       theoryPlace: null,
       theoryPoints: null,
-      practiceSum: null,
       practicePlace: null,
       practicePoints: null,
       totalTheoryPoints: null,
@@ -126,7 +131,7 @@ export class CarDriverService {
       finalPlace: null,
     };
 
-    return this.prisma.carDriverTask.upsert({
+    await this.prisma.carDriverTask.upsert({
       where: {
         car_driver_unique: {
           userId: dto.userId,

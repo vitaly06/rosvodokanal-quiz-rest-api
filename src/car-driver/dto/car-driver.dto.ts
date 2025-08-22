@@ -19,7 +19,7 @@ export class UpdateCarDriverTaskDto {
   // @ApiProperty({ example: '05:30', required: false })
   // @IsString()
   // @Matches(/^([0-5]?\d):([0-5]?\d)$/, {
-  //   message: 'Время должно быть в формате мм:сс',
+  //   message: 'Время должно быть в форматемм:сс',
   // })
   // @IsOptional()
   // theoryTime?: string;

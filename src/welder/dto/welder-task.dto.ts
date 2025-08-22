@@ -49,21 +49,18 @@ export class UpdateWelderTaskDto {
 
   @ApiProperty({ required: false })
   @IsNumber()
-  @Min(0)
   @IsOptional()
   @Type(() => Number)
   operationalControl?: number;
 
   @ApiProperty({ required: false })
   @IsNumber()
-  @Min(0)
   @IsOptional()
   @Type(() => Number)
   visualMeasurement?: number;
 
   @ApiProperty({ required: false })
   @IsNumber()
-  @Min(0)
   @IsOptional()
   @Type(() => Number)
   radiographicControl?: number;

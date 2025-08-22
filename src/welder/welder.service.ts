@@ -296,9 +296,10 @@ export class WelderService {
           userId: user.id,
           participantName: user.fullName.fullName || 'Неизвестный участник',
           stages,
-          totalStages: stages
-            .reduce((sum, stage) => sum + stage.stageScore || 0, 0)
-            .toFixed(2),
+          totalStages: stages.reduce(
+            (sum, stage) => sum + stage.stageScore || 0,
+            0,
+          ),
           theoryScore: theoryScore || 0,
           practiceScore,
           total: (theoryScore || 0) + practiceScore,
