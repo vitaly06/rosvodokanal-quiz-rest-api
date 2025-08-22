@@ -20,7 +20,9 @@ export class AvrPlumberService {
     minScore: number = 25,
   ): number {
     if (currentIndex === 0) return maxScore; // First place gets max score
-    if (currentIndex === sortedTimes.length - 1) return minScore; // Last place gets min score
+    // if (currentIndex === sortedTimes.length - 1) return minScore; // Last place gets min score
+    console.log(sortedTimes);
+    sortedTimes.filter((item) => item != '00');
 
     const currentSeconds = this.timeToSeconds(currentTime);
     const prevSeconds = this.timeToSeconds(sortedTimes[currentIndex - 1]);

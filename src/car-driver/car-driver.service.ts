@@ -57,6 +57,9 @@ export class CarDriverService {
 
   private formatTimeToMMSS(timeString: string) {
     // Извлекаем минуты и секунды из строки
+    if (!timeString) {
+      return '00:00';
+    }
     const minutesMatch = timeString.match(/(\d+)\s*мин/);
     const secondsMatch = timeString.match(/(\d+)\s*сек/);
 
@@ -168,14 +171,18 @@ export class CarDriverService {
             has: practicNomination.id,
           },
         },
-        TestResult: {
-          some: {
-            nominationId: nomination.id,
-          },
-        },
+        // TestResult: {
+        //   some: {
+        //     nominationId: nomination.id,
+        //   },
+        // },
       },
       include: {
-        fullName: { include: { branch: true } },
+        fullName: {
+          include: {
+            branch: true,
+          },
+        },
         TestResult: {
           where: {
             nominationId: nomination.id,
@@ -183,7 +190,6 @@ export class CarDriverService {
           orderBy: {
             finishedAt: 'desc',
           },
-          take: 1,
         },
         CarDriverTask: {
           where: {
@@ -192,6 +198,8 @@ export class CarDriverService {
         },
       },
     });
+
+    console.log(participants.length);
 
     // 1. Расчет теоретической части (ПДД)
     const theoryResults = participants
@@ -203,57 +211,95 @@ export class CarDriverService {
         user: p,
       }))
       .sort((a, b) => {
-        // Сортировка по количеству правильных ответов (убывание), затем по времени (возрастание)
+        // Сортировка по количеству правильных ответов (убывание)
         if (b.theoryCorrect !== a.theoryCorrect) {
           return b.theoryCorrect - a.theoryCorrect;
         }
+        // Если одинаковое количество баллов, то по времени (возрастание)
         return (
           this.timeToSeconds(a.theoryTime) - this.timeToSeconds(b.theoryTime)
         );
-      })
-      .map((res, index, array) => {
-        const place = index + 1;
-        // Баллы = (количество участников - место) + бонусные баллы
-        const points = array.length - place + this.getBonusPoints(place);
-        return {
-          ...res,
-          theoryPlace: place,
-          theoryPoints: points,
-        };
       });
+
+    console.log(theoryResults);
+
+    // Присваиваем места для теории
+    let currentTheoryPlace = 1;
+    let prevTheoryCorrect = -1;
+    let prevTheoryTime = -1;
+
+    const theoryResultsWithPlaces = theoryResults.map((result, index) => {
+      if (
+        index > 0 &&
+        (result.theoryCorrect !== prevTheoryCorrect ||
+          this.timeToSeconds(result.theoryTime) !== prevTheoryTime)
+      ) {
+        currentTheoryPlace = index + 1;
+      }
+
+      prevTheoryCorrect = result.theoryCorrect;
+      prevTheoryTime = this.timeToSeconds(result.theoryTime);
+
+      // Баллы = (количество участников - место) + бонусные баллы
+      const points =
+        theoryResults.length -
+        currentTheoryPlace +
+        this.getBonusPoints(currentTheoryPlace);
+
+      return {
+        ...result,
+        theoryPlace: currentTheoryPlace,
+        theoryPoints: points,
+      };
+    });
 
     // 2. Расчет практической части (маневрирование)
     const practiceResults = participants
       .filter((p) => p.CarDriverTask.length > 0)
       .map((p) => {
         const task = p.CarDriverTask[0];
-        // console.log(this.timeToSeconds(task.practiceTime));
         return {
           userId: p.id,
           practicePenalty: task.practicePenalty || 0,
           practiceTime: task.practiceTime || '00:00',
-          practiceSum:
-            this.timeToSeconds(task.practiceTime) + (task.practicePenalty || 0),
+          practiceSum: task.practiceSum || 0, // Используем уже рассчитанную сумму
           user: p,
         };
       })
-      .sort((a, b) => a.practiceSum - b.practiceSum) // Сортировка по сумме (возрастание)
-      .map((res, index, array) => {
-        const place = index + 1;
-        // Баллы = (количество участников - место) + бонусные баллы
-        const points = array.length - place + this.getBonusPoints(place);
-        return {
-          ...res,
-          practicePlace: place,
-          practicePoints: points,
-        };
-      });
+      .sort((a, b) => a.practiceSum - b.practiceSum); // Меньшая сумма = лучше
+
+    // Присваиваем места для практики
+    let currentPracticePlace = 1;
+    let prevPracticeSum = -1;
+
+    const practiceResultsWithPlaces = practiceResults.map((result, index) => {
+      // Если текущая сумма отличается от предыдущей, увеличиваем место
+      if (index > 0 && result.practiceSum !== prevPracticeSum) {
+        currentPracticePlace = index + 1;
+      }
+
+      prevPracticeSum = result.practiceSum;
+
+      // Баллы = (количество участников - место) + бонусные баллы
+      const points =
+        practiceResults.length -
+        currentPracticePlace +
+        this.getBonusPoints(currentPracticePlace);
+      return {
+        ...result,
+        practicePlace: currentPracticePlace,
+        practicePoints: points,
+      };
+    });
 
     // 3. Объединение результатов
+    console.log(participants.length);
     const combinedResults = participants
       .map((p) => {
-        const theory = theoryResults.find((t) => t.userId === p.id);
-        const practice = practiceResults.find((pr) => pr.userId === p.id);
+        const theory = theoryResultsWithPlaces.find((t) => t.userId === p.id);
+        const practice = practiceResultsWithPlaces.find(
+          (pr) => pr.userId === p.id,
+        );
 
         const totalPoints =
           (theory?.theoryPoints || 0) + (practice?.practicePoints || 0);
@@ -266,12 +312,13 @@ export class CarDriverService {
           number: p.number,
           // Теория
           theoryCorrect: theory?.theoryCorrect || 0,
-          theoryTime: theory?.theoryTime || '00:00',
+          theoryTime: this.formatTimeToMMSS(theory?.theoryTime) || '00:00',
           theoryPlace: theory?.theoryPlace || null,
           theoryPoints: theory?.theoryPoints || 0,
           // Практика
           practicePenalty: practice?.practicePenalty || 0,
-          practiceTime: practice?.practiceTime || '00:00',
+          practiceTime:
+            this.formatTimeToMMSS(practice?.practiceTime) || '00:00',
           practiceSum: practice?.practiceSum || 0,
           practicePlace: practice?.practicePlace || null,
           practicePoints: practice?.practicePoints || 0,
@@ -287,10 +334,8 @@ export class CarDriverService {
         finalPlace: index + 1,
       }));
 
-    // 4. Сохранение результатов в БД
     await Promise.all(
       combinedResults.map(async (res) => {
-        console.log(res);
         return await this.prisma.carDriverTask.upsert({
           where: {
             car_driver_unique: {
@@ -300,7 +345,7 @@ export class CarDriverService {
           },
           update: {
             theoryCorrect: res.theoryCorrect,
-            theoryTime: await this.formatTimeToMMSS(res.theoryTime),
+            theoryTime: res.theoryTime,
             theoryPlace: res.theoryPlace,
             theoryPoints: res.theoryPoints,
             practicePenalty: res.practicePenalty,
@@ -318,7 +363,7 @@ export class CarDriverService {
             branchId: res.branchId,
             nominationId: nomination.id,
             theoryCorrect: res.theoryCorrect,
-            theoryTime: await this.formatTimeToMMSS(res.theoryTime),
+            theoryTime: res.theoryTime,
             theoryPlace: res.theoryPlace,
             theoryPoints: res.theoryPoints,
             practicePenalty: res.practicePenalty,
@@ -387,6 +432,8 @@ export class CarDriverService {
         },
       });
 
+      console.log(tasks.length);
+
       result.push({
         id: task.id,
         practicNominationId: practicNomination.id,
@@ -409,7 +456,6 @@ export class CarDriverService {
           theoryPoints: task.totalTheoryPoints,
           practicePoints: task.totalPracticePoints,
           points: task.totalPoints,
-          // place: task.finalPlace,
         },
         user: {
           id: task.user.id,
@@ -423,7 +469,7 @@ export class CarDriverService {
     }
 
     result = result
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => b.result.points - a.result.points)
       .map((item, index) => ({ ...item, place: index + 1 }));
 
     return result.sort((a, b) =>
