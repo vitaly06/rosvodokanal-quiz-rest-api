@@ -26,9 +26,9 @@ model FullName {
   id                       Int     @id @default(autoincrement())
   fullName                 String
   branchId                 Int?
-  branch                   Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branch                   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
   participatingNominations Int[]   @default([])
-  user                     User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                     User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
   userId                   Int?    @unique // Связь один-к-одному
 }
 
@@ -396,7 +396,7 @@ model ChemLabTechnician {
 
   // Связи
   userId       Int
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id])
   branchId     Int
   branch       Branch     @relation(fields: [branchId], references: [id])
   nominationId Int
