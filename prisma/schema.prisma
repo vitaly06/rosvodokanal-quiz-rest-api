@@ -167,6 +167,8 @@ model BranchLineNumber {
 
   // Уникальный ключ: один филиал может иметь только один номер линии в номинации
   @@unique([branchId, practicNominationId], name: "branch_practic_line_unique")
+  // Уникальный ключ: номер линии должен быть уникальным в рамках номинации
+  @@unique([practicNominationId, lineNumber], name: "practic_nomination_line_number_unique", map: "practic_nomination_line_number_unique")
 }
 
 model UserLineNumber {
@@ -179,6 +181,8 @@ model UserLineNumber {
 
   // Уникальный ключ: один участник может иметь только один номер линии в номинации
   @@unique([userId, practicNominationId], name: "user_practic_line_unique")
+  // Уникальный ключ: номер линии должен быть уникальным в рамках номинации
+  @@unique([practicNominationId, lineNumber], name: "user_practic_nomination_line_unique", map: "user_practic_nomination_line_unique")
 }
 
 // Лучшая бригада  АВР по водопроводным сетям - 2025

@@ -9700,6 +9700,20 @@ CREATE UNIQUE INDEX "WelderTask_branchId_nominationId_taskNumber_userId_key" ON 
 
 
 --
+-- Name: practic_nomination_line_number_unique; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX practic_nomination_line_number_unique ON public."BranchLineNumber" USING btree ("practicNominationId", "lineNumber");
+
+
+--
+-- Name: user_practic_nomination_line_unique; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX user_practic_nomination_line_unique ON public."UserLineNumber" USING btree ("practicNominationId", "lineNumber");
+
+
+--
 -- Name: Answer Answer_questionId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
