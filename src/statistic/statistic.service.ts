@@ -217,10 +217,34 @@ export class StatisticService {
     const branches = await this.prisma.branch.findMany();
     let testResults;
 
+    // const practiceNomi;
+
     let score;
 
     const result = [];
 
+    // const nomination = await this.prisma.nomination.findFirst({
+    //   where: { name: 'Сварщик' },
+    // });
+
+    // if (nominationId == nomination.id) {
+    //   for (const branch of branches) {
+    //     testResults = await this.prisma.testResult.findMany({
+    //       where: {
+    //         user: {
+    //           fullName: {
+    //             participatingNominations: {
+    //               has: ''
+    //             }
+    //             branch: {
+    //               id: branch.id,
+    //             },
+    //           },
+    //         },
+    //       },
+    //     });
+    //   }
+    // }
     for (const branch of branches) {
       testResults = await this.prisma.testResult.findMany({
         where: {
