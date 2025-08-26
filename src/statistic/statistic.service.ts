@@ -212,11 +212,7 @@ export class StatisticService {
 
   async getTheoryTable(nominationId: number | null) {
     if (!nominationId) {
-      nominationId = (
-        await this.prisma.nomination.findUnique({
-          where: { name: 'Сварщик' },
-        })
-      )?.id;
+      return await this.getFullTable();
     }
     const branches = await this.prisma.branch.findMany();
     let testResults;
@@ -242,6 +238,45 @@ export class StatisticService {
         select: {
           score: true,
           // total: true,
+        },
+      });
+
+      // total = testResults.reduce((sum, elem) => (sum += elem.total), 0);
+      score = testResults.reduce((sum, elem) => (sum += elem.score), 0);
+
+      result.push({
+        branchId: branch.id,
+        branchName: branch.address,
+        score: score || 0,
+        // total: total || 0,
+      });
+    }
+
+    return result.sort((a, b) => b.score - a.score);
+  }
+
+  async getFullTable() {
+    const branches = await this.prisma.branch.findMany();
+    const result = [];
+
+    let testResults;
+    let score;
+
+    console.log(branches);
+
+    for (const branch of branches) {
+      testResults = await this.prisma.testResult.findMany({
+        where: {
+          user: {
+            fullName: {
+              branch: {
+                id: branch.id,
+              },
+            },
+          },
+        },
+        select: {
+          score: true,
         },
       });
 

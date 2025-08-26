@@ -13060,5 +13060,4 @@ ALTER TABLE ONLY public."WelderTask"
 -- PostgreSQL database dump complete
 --
 
-\unrestrict bc8zIsancHyMuZeOejkvaWpI9hRY35TXJum2ZmLvJ1tPcehjZh1PGQPLQWTywlL
 
