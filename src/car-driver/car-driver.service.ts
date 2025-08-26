@@ -30,6 +30,8 @@ export class CarDriverService {
         fullName: { include: { branch: true } },
       },
     });
+    let theoryPoints;
+
     for (const user of users) {
       const results = await this.prisma.carDriverTask.findFirst({
         where: {
@@ -37,13 +39,25 @@ export class CarDriverService {
           nominationId: nomination.id,
         },
       });
+      console.log(1);
+      theoryPoints = await this.prisma.testResult.findMany({
+        where: { nominationId: nomination.id, userId: user.id },
+        select: {
+          score: true,
+        },
+      });
+
+      console.log(theoryPoints);
 
       result.push({
         branchName: user.fullName.branch.address,
         fullName: user.fullName.fullName,
-        theoryScore: results?.theoryPoints || 0,
+        theoryScore:
+          theoryPoints.reduce((sum, elem) => (sum += elem.score), 0) || 0,
         practiceScore: results?.practicePoints || 0,
-        totalScore: results?.totalPoints,
+        totalScore:
+          (theoryPoints.reduce((sum, elem) => (sum += elem.score), 0) || 0) +
+          (results?.practicePoints || 0),
       });
     }
 

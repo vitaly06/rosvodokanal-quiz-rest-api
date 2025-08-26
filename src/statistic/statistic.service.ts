@@ -193,7 +193,7 @@ export class StatisticService {
       points[branch.address] = 0;
     }
     for (const result of nomination.TestResult) {
-      if (result.user.fullName.branch.address) {
+      if (result.user.fullName?.branch.address) {
         points[result.user.fullName.branch.address] += result.score;
       }
     }

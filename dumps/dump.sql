@@ -2,10 +2,8 @@
 -- PostgreSQL database dump
 --
 
-\restrict bc8zIsancHyMuZeOejkvaWpI9hRY35TXJum2ZmLvJ1tPcehjZh1PGQPLQWTywlL
-
--- Dumped from database version 13.22
--- Dumped by pg_dump version 13.22
+-- Dumped from database version 14.18 (Ubuntu 14.18-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.18 (Ubuntu 14.18-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -7108,7 +7106,6 @@ COPY public."ChemLabTechnician" (id, "stage1aTime", "stage1aTimeScore", "stage1a
 COPY public."FullName" (id, "fullName", "branchId", "participatingNominations", "userId") FROM stdin;
 13	Скоробогатых Александр Сергеевич	8	{3}	228
 116	Анохин Артем Андреевич	12	{4}	244
-2	Лапин Борис Александрович	8	{2}	225
 123	Долгов Александр Александрович	14	{1}	231
 114	Шумилов Андрей Викторович	12	{3}	250
 119	Голубев Евгений Александрович	12	{7}	248
@@ -7235,6 +7232,7 @@ COPY public."FullName" (id, "fullName", "branchId", "participatingNominations", 
 93	Сапрыкин Вячеслав Игоревич	10	{3}	181
 69	Родионова Анастасия Александровна	6	{8}	264
 96	Ерошкин Владимир Александрович	10	{3}	187
+2	Лапин Борис Андреевич	8	{2}	225
 \.
 
 
@@ -9252,26 +9250,6 @@ COPY public."TestAnswer" (id, "testResultId", "questionId", "optionId") FROM std
 1902	133	1970	5973
 1903	133	1974	5984
 1904	133	1975	5988
-1905	134	1922	5832
-1906	134	1924	5838
-1907	134	1925	5840
-1908	134	1929	5853
-1909	134	1939	5881
-1910	134	1942	6446
-1911	134	1951	5916
-1912	134	1955	5927
-1913	134	1956	5931
-1914	134	1965	5956
-1915	134	1969	5969
-1916	134	1978	5997
-1917	134	1990	6031
-1918	134	1995	6048
-1919	134	2008	6087
-1920	134	2009	6091
-1921	134	2010	6095
-1922	134	2014	6105
-1923	134	2021	6129
-1924	134	2025	\N
 1925	135	2031	6160
 1926	135	2032	6166
 1927	135	2044	6204
@@ -11963,7 +11941,6 @@ COPY public."TestResult" (id, "userId", "nominationId", score, total, percentage
 131	139	4	20	20	100	3 мин 19 сек	2025-08-26 03:40:14.595	2025-08-26 03:43:33.247
 132	144	4	19	20	95	3 мин 28 сек	2025-08-26 03:40:26.725	2025-08-26 03:43:55.058
 133	140	4	20	20	100	4 мин 18 сек	2025-08-26 03:40:15.906	2025-08-26 03:44:34.162
-134	141	4	19	20	95	4 мин 43 сек	2025-08-26 03:40:16.432	2025-08-26 03:44:59.163
 135	146	2	20	20	100	4 мин 43 сек	2025-08-26 03:40:34.655	2025-08-26 03:45:17.479
 136	152	7	20	20	100	3 мин 22 сек	2025-08-26 03:41:57.743	2025-08-26 03:45:19.589
 137	148	3	19	20	95	3 мин 43 сек	2025-08-26 03:42:16.151	2025-08-26 03:45:59.595
@@ -12269,7 +12246,7 @@ COPY public."WelderTask" (id, "taskNumber", "timeScore", "culturePenalty", "safe
 --
 
 COPY public._prisma_migrations (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count) FROM stdin;
-7de57290-bae4-4b52-8067-c81e0d21d8fb	ec3262bb1d6259ff48563706f26e51dfe8a4dc2ab1f14ef6aa8b88832db89ba1	2025-05-30 06:14:27.270361+00	20250530061426_auth_migration	\N	\N	2025-05-30 06:14:27.215356+00	1
+7de57290-bae4-4b52-8067-c81e0d21d8fb	ec3262bb1d6259ff48563706f26e51dfe8a4dc2ab1f14ef6aa8b88832db89ba1	2025-05-30 11:14:27.270361+05	20250530061426_auth_migration	\N	\N	2025-05-30 11:14:27.215356+05	1
 \.
 
 
@@ -13059,6 +13036,4 @@ ALTER TABLE ONLY public."WelderTask"
 --
 -- PostgreSQL database dump complete
 --
-
-\unrestrict bc8zIsancHyMuZeOejkvaWpI9hRY35TXJum2ZmLvJ1tPcehjZh1PGQPLQWTywlL
 
