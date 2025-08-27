@@ -58,6 +58,7 @@ export class ChemLabTechnicianService {
   }
 
   async updateTask(dto: UpdateChemLabTechnicianDto) {
+    console.log(dto.stage1bQuality);
     const nomination = await this.prisma.nomination.findFirst({
       where: { name: 'Лаборант химического анализа' },
     });
@@ -246,6 +247,7 @@ export class ChemLabTechnicianService {
 
         // Бонусные баллы за isBest - добавляются ТОЛЬКО к stage1bTotal
         const stage1bBonus = task.isBest ? 20 : 0;
+        console.log(task.stage1bQuality);
         const stage1bTotal =
           this.calculateStageScore(
             stage1bTimeScore,
