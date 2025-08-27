@@ -89,6 +89,7 @@ export class UpdateChemLabTechnicianDto {
   @IsOptional()
   stage2Safety?: number;
 
+  @ApiProperty()
   @IsBoolean()
   isBest?: boolean;
 }

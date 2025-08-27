@@ -19,27 +19,23 @@ export class ChemLabTechnicianService {
     maxScore: number,
     minScore: number,
   ): number {
-    if (currentIndex === 0) return maxScore; // First place gets max score
-    if (currentIndex === sortedTimes.length - 1) return minScore; // Last place gets min score
+    if (currentIndex === 0) return maxScore;
+    if (currentIndex === sortedTimes.length - 1) return minScore;
 
     const currentSeconds = this.timeToSeconds(currentTime);
     const prevSeconds = this.timeToSeconds(sortedTimes[currentIndex - 1]);
     const nextSeconds = this.timeToSeconds(sortedTimes[currentIndex + 1]);
 
-    // Calculate time differences with neighbors
     const diffWithPrev = currentSeconds - prevSeconds;
     const diffWithNext = nextSeconds - currentSeconds;
     const avgDiff = (diffWithPrev + diffWithNext) / 2;
 
-    // Calculate total time range
     const totalTimeRange =
       this.timeToSeconds(sortedTimes[sortedTimes.length - 1]) -
       this.timeToSeconds(sortedTimes[0]);
 
-    // Calculate total score range
     const totalScoreRange = maxScore - minScore;
 
-    // Calculate score by accumulating penalties for each position
     let score = maxScore;
     for (let i = 0; i < currentIndex; i++) {
       const prevTime = this.timeToSeconds(sortedTimes[i]);
@@ -79,6 +75,60 @@ export class ChemLabTechnicianService {
       throw new Error('Пользователь не найден');
     }
 
+    // Получаем текущую запись чтобы проверить предыдущее значение isBest
+    const existingTask = await this.prisma.chemLabTechnician.findUnique({
+      where: {
+        chem_lab_technician_unique: {
+          userId: dto.userId,
+          nominationId: nomination.id,
+        },
+      },
+    });
+
+    const updateData: any = {
+      ...(dto.stage1aTime !== undefined && { stage1aTime: dto.stage1aTime }),
+      ...(dto.stage1aQuality !== undefined && {
+        stage1aQuality: dto.stage1aQuality,
+      }),
+      ...(dto.stage1aCulture !== undefined && {
+        stage1aCulture: dto.stage1aCulture,
+      }),
+      ...(dto.stage1aSafety !== undefined && {
+        stage1aSafety: dto.stage1aSafety,
+      }),
+
+      ...(dto.stage1bTime !== undefined && { stage1bTime: dto.stage1bTime }),
+      ...(dto.stage1bQuality !== undefined && {
+        stage1bQuality: dto.stage1bQuality,
+      }),
+      ...(dto.stage1bCulture !== undefined && {
+        stage1bCulture: dto.stage1bCulture,
+      }),
+      ...(dto.stage1bSafety !== undefined && {
+        stage1bSafety: dto.stage1bSafety,
+      }),
+
+      ...(dto.stage2Time !== undefined && { stage2Time: dto.stage2Time }),
+      ...(dto.stage2Quality !== undefined && {
+        stage2Quality: dto.stage2Quality,
+      }),
+      ...(dto.stage2Culture !== undefined && {
+        stage2Culture: dto.stage2Culture,
+      }),
+      ...(dto.stage2Safety !== undefined && { stage2Safety: dto.stage2Safety }),
+    };
+
+    // Обрабатываем isBest отдельно
+    if (dto.isBest !== undefined) {
+      updateData.isBest = dto.isBest;
+
+      // Если меняем с true на false, нужно пересчитать баллы
+      if (existingTask?.isBest === true && dto.isBest === false) {
+        // Помечаем для пересчета в calculateResults
+        updateData.needsRecalculation = true;
+      }
+    }
+
     return this.prisma.chemLabTechnician.upsert({
       where: {
         chem_lab_technician_unique: {
@@ -86,23 +136,7 @@ export class ChemLabTechnicianService {
           nominationId: nomination.id,
         },
       },
-      update: {
-        ...(dto.stage1aTime && { stage1aTime: dto.stage1aTime }),
-        ...(dto.stage1aQuality && { stage1aQuality: dto.stage1aQuality }),
-        ...(dto.stage1aCulture && { stage1aCulture: dto.stage1aCulture }),
-        ...(dto.stage1aSafety && { stage1aSafety: dto.stage1aSafety }),
-
-        ...(dto.stage1bTime && { stage1bTime: dto.stage1bTime }),
-        ...(dto.stage1bQuality && { stage1bQuality: dto.stage1bQuality }),
-        ...(dto.stage1bCulture && { stage1bCulture: dto.stage1bCulture }),
-        ...(dto.stage1bSafety && { stage1bSafety: dto.stage1bSafety }),
-
-        ...(dto.stage2Time && { stage2Time: dto.stage2Time }),
-        ...(dto.stage2Quality && { stage2Quality: dto.stage2Quality }),
-        ...(dto.stage2Culture && { stage2Culture: dto.stage2Culture }),
-        ...(dto.stage2Safety && { stage2Safety: dto.stage2Safety }),
-        ...(dto.isBest && { isBest: dto.isBest }),
-      },
+      update: updateData,
       create: {
         userId: dto.userId,
         branchId: user.fullName.branchId,
@@ -178,8 +212,8 @@ export class ChemLabTechnicianService {
                 task.stage1aTime,
                 stage1aTimes,
                 stage1aIndex,
-                40, // maxScore
-                20, // minScore
+                40,
+                20,
               )
             : 0;
 
@@ -205,17 +239,20 @@ export class ChemLabTechnicianService {
                 task.stage1bTime,
                 stage1bTimes,
                 stage1bIndex,
-                60, // maxScore
-                40, // minScore
+                60,
+                40,
               )
             : 0;
 
-        const stage1bTotal = this.calculateStageScore(
-          stage1bTimeScore,
-          task.stage1bQuality,
-          task.stage1bCulture,
-          task.stage1bSafety,
-        );
+        // Бонусные баллы за isBest - добавляются ТОЛЬКО к stage1bTotal
+        const stage1bBonus = task.isBest ? 20 : 0;
+        const stage1bTotal =
+          this.calculateStageScore(
+            stage1bTimeScore,
+            task.stage1bQuality,
+            task.stage1bCulture,
+            task.stage1bSafety,
+          ) + stage1bBonus; // Добавляем бонус здесь
 
         // Stage 2
         const stage2Times = tasks
@@ -230,8 +267,8 @@ export class ChemLabTechnicianService {
                 task.stage2Time,
                 stage2Times,
                 stage2Index,
-                100, // maxScore
-                60, // minScore
+                100,
+                60,
               )
             : 0;
 
@@ -242,7 +279,7 @@ export class ChemLabTechnicianService {
           task.stage2Safety,
         );
 
-        // Total points
+        // Total points (бонус уже включен в stage1bTotal)
         const totalPoints = stage1aTotal + stage1bTotal + stage2Total;
 
         return {
@@ -251,6 +288,7 @@ export class ChemLabTechnicianService {
           stage1aTotal,
           stage1bTimeScore,
           stage1bTotal,
+          stage1bBonus, // Сохраняем отдельно для отладки
           stage2TimeScore,
           stage2Total,
           totalPoints,
@@ -305,11 +343,6 @@ export class ChemLabTechnicianService {
 
     const participants = await this.prisma.user.findMany({
       where: {
-        // TestResult: {
-        //   some: {
-        //     nominationId: nomination.id,
-        //   },
-        // },
         fullName: {
           participatingNominations: {
             has: practicNomination.id,
@@ -343,8 +376,6 @@ export class ChemLabTechnicianService {
           },
         });
 
-        const bonus = task.isBest ? 20 : 0;
-
         return {
           id: task?.id || null,
           practicNominationId: practicNomination.id,
@@ -372,8 +403,9 @@ export class ChemLabTechnicianService {
               quality: task?.stage1bQuality || 0,
               culture: task?.stage1bCulture || 0,
               safety: task?.stage1bSafety || 0,
-              total: ((task?.stage1bTotal || 0) + bonus).toFixed(2),
-              isBest: task.isBest,
+              total: (task?.stage1bTotal || 0).toFixed(2), // Бонус уже включен в stage1bTotal
+              isBest: task?.isBest || false,
+              bonus: task?.isBest ? 20 : 0, // Показываем бонус отдельно
             },
             {
               name: '2',
@@ -386,9 +418,8 @@ export class ChemLabTechnicianService {
             },
           ],
           theoryScore: theoryScore.toFixed(2),
-          practiceScore: ((task?.totalPoints || 0) + bonus).toFixed(2),
-          total: (theoryScore + ((task?.totalPoints || 0) + bonus)).toFixed(2),
-          // place: task?.finalPlace || null,
+          practiceScore: (task?.totalPoints || 0).toFixed(2), // Бонус уже включен
+          total: (theoryScore + (task?.totalPoints || 0)).toFixed(2),
         };
       }),
     );
