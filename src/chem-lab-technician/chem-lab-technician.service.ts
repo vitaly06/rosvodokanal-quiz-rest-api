@@ -372,7 +372,8 @@ export class ChemLabTechnicianService {
               quality: task?.stage1bQuality || 0,
               culture: task?.stage1bCulture || 0,
               safety: task?.stage1bSafety || 0,
-              total: (task?.stage1bTotal || 0).toFixed(2),
+              total: ((task?.stage1bTotal || 0) + bonus).toFixed(2),
+              isBest: task.isBest,
             },
             {
               name: '2',
@@ -386,7 +387,7 @@ export class ChemLabTechnicianService {
           ],
           theoryScore: theoryScore.toFixed(2),
           practiceScore: ((task?.totalPoints || 0) + bonus).toFixed(2),
-          total: (theoryScore + (task?.totalPoints || 0)).toFixed(2),
+          total: (theoryScore + ((task?.totalPoints || 0) + bonus)).toFixed(2),
           // place: task?.finalPlace || null,
         };
       }),
