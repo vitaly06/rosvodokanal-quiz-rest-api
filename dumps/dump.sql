@@ -453,7 +453,8 @@ CREATE TABLE public."ChemLabTechnician" (
     "userId" integer NOT NULL,
     "branchId" integer NOT NULL,
     "nominationId" integer NOT NULL,
-    "isBest" boolean DEFAULT false NOT NULL
+    "isBest" boolean DEFAULT false NOT NULL,
+    "needsRecalculation" boolean DEFAULT false NOT NULL
 );
 
 
@@ -7193,18 +7194,19 @@ COPY public."Category" (id, name, "nominationId") FROM stdin;
 -- Data for Name: ChemLabTechnician; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public."ChemLabTechnician" (id, "stage1aTime", "stage1aTimeScore", "stage1aQuality", "stage1aCulture", "stage1aSafety", "stage1aTotal", "stage1bTime", "stage1bTimeScore", "stage1bQuality", "stage1bCulture", "stage1bSafety", "stage1bTotal", "stage2Time", "stage2TimeScore", "stage2Quality", "stage2Culture", "stage2Safety", "stage2Total", "totalPoints", "finalPlace", "userId", "branchId", "nominationId", "isBest") FROM stdin;
-102	08:10	34.39	0	0	0	34.39	08:54	58.71	0	0	0	58.71	08:17	93.93	0	0	0	93.93	187.03	3	146	5	2	f
-98	05:57	40	0	0	0	40	08:04	60	0	0	0	60	08:49	88.95	0	0	0	88.95	188.95	2	219	8	2	f
-95	11:46	25.27	0	0	0	25.27	14:10	50.53	0	0	0	50.53	09:33	82.1	0	0	0	82.1	157.9	7	158	7	2	f
-88	11:11	26.75	20	0	0	6.75	15:22	48.67	0	0	0	48.67	10:18	75.1	0	0	0	75.1	130.52	10	207	3	2	f
-94	09:42	30.51	0	0	0	30.51	13:34	51.46	0	0	0	51.46	10:31	73.07	0	0	0	73.07	155.04	8	157	11	2	f
-99	06:07	39.58	0	0	0	39.58	09:52	57.21	0	0	0	57.21	07:38	100	0	0	0	100	196.79	1	264	6	2	f
-92	07:48	35.32	0	0	0	35.32	11:58	53.95	0	0	0	53.95	10:03	77.43	0	0	0	77.43	166.7	5	174	4	2	f
-97	09:42	30.51	0	0	0	30.51	11:23	54.85	0	0	0	54.85	08:49	88.95	0	0	0	88.95	174.31	4	197	9	2	f
-96	07:15	36.71	0	0	0	36.71	11:59	53.92	0	0	0	53.92	10:14	75.72	0	0	0	75.72	166.35	6	179	10	2	f
-100	13:51	20	0	0	0	20	08:52	58.76	0	0	0	58.76	11:27	64.36	0	0	0	64.36	143.12	9	249	12	2	f
-86	12:58	22.24	20	0	0	2.239999999999998	20:57	40	0	0	0	40	11:55	60	0	0	0	60	102.24	11	237	14	2	f
+COPY public."ChemLabTechnician" (id, "stage1aTime", "stage1aTimeScore", "stage1aQuality", "stage1aCulture", "stage1aSafety", "stage1aTotal", "stage1bTime", "stage1bTimeScore", "stage1bQuality", "stage1bCulture", "stage1bSafety", "stage1bTotal", "stage2Time", "stage2TimeScore", "stage2Quality", "stage2Culture", "stage2Safety", "stage2Total", "totalPoints", "finalPlace", "userId", "branchId", "nominationId", "isBest", "needsRecalculation") FROM stdin;
+97	09:42	30.51	0	0	0	30.51	11:23	54.85	0	0	0	54.85	08:49	88.95	0	0	0	88.95	174.31	4	197	9	2	f	f
+99	06:07	39.58	0	0	0	39.58	09:52	57.21	0	0	0	57.21	07:38	100	0	0	0	100	196.79	1	264	6	2	f	f
+100	13:51	20	0	0	0	20	08:52	58.76	0	0	0	58.76	11:27	64.36	0	0	0	64.36	143.12	9	249	12	2	f	f
+86	12:58	22.24	20	0	0	2.239999999999998	20:57	40	0	0	0	40	11:55	60	0	0	0	60	102.24	11	237	14	2	f	f
+132	00:00	\N	0	0	0	\N	00:00	\N	0	0	0	\N	00:00	\N	0	0	0	\N	\N	\N	156	7	2	f	f
+102	08:10	34.39	0	0	0	34.39	08:54	58.71	0	0	0	58.71	08:17	93.93	0	0	0	93.93	187.03	3	146	5	2	f	f
+95	11:46	25.27	0	0	0	25.27	14:10	50.53	0	0	0	50.53	09:33	82.1	0	0	0	82.1	157.9	7	158	7	2	f	f
+88	11:11	26.75	20	0	0	6.75	15:22	48.67	0	0	0	48.67	10:18	75.1	0	0	0	75.1	130.52	10	207	3	2	f	f
+96	07:15	36.71	0	0	0	36.71	11:59	53.92	0	0	0	53.92	10:14	75.72	0	0	0	75.72	166.35	6	179	10	2	f	f
+98	05:57	40	0	0	0	40	08:04	60	0	0	0	60	08:49	88.95	0	0	0	88.95	188.95	2	219	8	2	f	t
+94	09:42	30.51	0	0	0	30.51	13:34	51.46	0	0	0	51.46	10:31	73.07	0	0	0	73.07	155.04	8	157	11	2	f	t
+92	07:48	35.32	0	0	0	35.32	11:58	53.95	0	0	0	53.95	10:03	77.43	0	0	0	77.43	166.7	5	174	4	2	f	f
 \.
 
 
@@ -12355,7 +12357,7 @@ SELECT pg_catalog.setval('public."Category_id_seq"', 1, false);
 -- Name: ChemLabTechnician_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."ChemLabTechnician_id_seq"', 131, true);
+SELECT pg_catalog.setval('public."ChemLabTechnician_id_seq"', 148, true);
 
 
 --
