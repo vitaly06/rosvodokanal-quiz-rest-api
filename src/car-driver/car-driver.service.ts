@@ -39,15 +39,12 @@ export class CarDriverService {
           nominationId: nomination.id,
         },
       });
-      console.log(1);
       theoryPoints = await this.prisma.testResult.findMany({
         where: { nominationId: nomination.id, userId: user.id },
         select: {
           score: true,
         },
       });
-
-      console.log(theoryPoints);
 
       result.push({
         branchName: user.fullName.branch.address,
@@ -72,8 +69,15 @@ export class CarDriverService {
   private formatTimeToMMSS(timeString: string) {
     // Извлекаем минуты и секунды из строки
     if (!timeString) {
+      console.log(1);
       return '00:00';
     }
+
+    if (timeString.includes(':')) {
+      console.log(2);
+      return timeString;
+    }
+
     const minutesMatch = timeString.match(/(\d+)\s*мин/);
     const secondsMatch = timeString.match(/(\d+)\s*сек/);
 
@@ -93,7 +97,6 @@ export class CarDriverService {
       timeStr = this.formatTimeToMMSS(timeStr);
     }
     const [minutes, seconds] = timeStr.split(':').map(Number);
-    console.log(`${timeStr} - ${minutes * 60 + seconds}`);
     return minutes * 60 + seconds;
   }
   private secondsToTime(seconds: number): string {
@@ -107,6 +110,8 @@ export class CarDriverService {
       where: { name: 'Водитель автомобиля (легкового)' },
     });
 
+    console.log(dto.practiceTime);
+
     if (!nomination) {
       throw new Error('Номинация не найдена');
     }
@@ -116,18 +121,25 @@ export class CarDriverService {
       include: { fullName: { include: { branch: true } } },
     });
 
+    console.log(`${user.fullName?.fullName}: ${dto.practiceTime}`);
+
     if (!user) {
       throw new Error('Пользователь не найден');
     }
 
     // Конвертируем время в секунды и вычисляем сумму
-    const practiceTimeSeconds = this.timeToSeconds(dto.practiceTime || '00:00');
+
+    let practiceTime = '00:00';
+    if (dto.practiceTime && dto.practiceTime.trim() !== '') {
+      practiceTime = dto.practiceTime.trim();
+    }
+    const practiceTimeSeconds = this.timeToSeconds(practiceTime || '00:00');
     const practicePenalty = dto.practicePenalty || 0;
     const practiceSum = practiceTimeSeconds + practicePenalty;
 
     const updateData = {
       practicePenalty: practicePenalty,
-      practiceTime: dto.practiceTime || '00:00',
+      practiceTime: practiceTime,
       practiceSum: practiceSum, // Добавляем расчет суммы
     };
 
@@ -148,7 +160,7 @@ export class CarDriverService {
       finalPlace: null,
     };
 
-    await this.prisma.carDriverTask.upsert({
+    const result = await this.prisma.carDriverTask.upsert({
       where: {
         car_driver_unique: {
           userId: dto.userId,
@@ -158,6 +170,10 @@ export class CarDriverService {
       update: updateData,
       create: createData,
     });
+
+    console.log(updateData);
+
+    return result;
   }
 
   private getBonusPoints(place: number): number {
@@ -443,8 +459,6 @@ export class CarDriverService {
         },
       });
 
-      console.log(tasks.length);
-
       result.push({
         id: task.id,
         practicNominationId: practicNomination.id,
@@ -480,7 +494,15 @@ export class CarDriverService {
     }
 
     result = result
-      .sort((a, b) => b.result.points - a.result.points)
+      .sort((a, b) => {
+        if (a.result.points != b.result.points) {
+          return b.result.points - a.result.points;
+        }
+        return (
+          this.timeToSeconds(a.practice.time) -
+          this.timeToSeconds(b.practice.time)
+        );
+      })
       .map((item, index) => ({ ...item, place: index + 1 }));
 
     return result.sort((a, b) =>

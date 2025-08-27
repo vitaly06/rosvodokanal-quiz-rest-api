@@ -236,6 +236,10 @@ export class TruckDriverService {
       },
     });
 
+    for (const parc of participants) {
+      console.log(parc.fullName.fullName);
+    }
+
     const theoryResults = participants
       .filter((p) => p.TestResult.length > 0)
       .map((p) => ({
@@ -499,7 +503,15 @@ export class TruckDriverService {
     );
 
     result = result
-      .sort((a, b) => b.result.points - a.result.points)
+      .sort((a, b) => {
+        if (a.result.points != b.result.points) {
+          return b.result.points - a.result.points;
+        }
+        return (
+          this.timeToSeconds(a.practice.time) -
+          this.timeToSeconds(b.practice.time)
+        );
+      })
       .map((item, index) => ({ ...item, place: index + 1 }));
 
     return result.sort((a, b) =>

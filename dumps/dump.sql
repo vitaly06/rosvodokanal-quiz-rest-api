@@ -2,8 +2,10 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.18 (Ubuntu 14.18-0ubuntu0.22.04.1)
--- Dumped by pg_dump version 14.18 (Ubuntu 14.18-0ubuntu0.22.04.1)
+\restrict owCYcnMIaXIrUayxOe4K0MeatABkUkobguz27sZhp3hixJhVpCuHjk6SxQ3afsX
+
+-- Dumped from database version 13.22
+-- Dumped by pg_dump version 13.22
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -7020,6 +7022,24 @@ COPY public."Answer" (id, answer, correctness, "questionId") FROM stdin;
 --
 
 COPY public."AvrMechanicTask" (id, "taskNumber", "timeScore", "hydraulicTest", "safetyPenalty", "culturePenalty", "qualityPenalty", "stageScore", "branchId", "nominationId", "time") FROM stdin;
+16	1	30	t	10	5	5	10	8	4	04:22
+17	1	60	t	10	0	5	45	9	4	03:00
+18	1	30	t	0	0	5	25	3	4	04:43
+24	1	44	t	0	0	0	44	4	4	05:11
+13	1	30	t	5	0	5	20	7	4	07:03
+14	1	52	t	0	0	5	47	12	4	04:02
+15	1	47	t	0	5	5	37	5	4	04:48
+25	1	41	t	5	0	0	36	14	4	05:33
+26	1	52	t	5	0	0	47	6	4	04:00
+27	2	100	f	5	0	0	0	7	4	41:09
+19	2	99	t	0	0	0	99	4	4	19:01
+20	2	57	t	0	0	0	57	12	4	36:48
+21	2	100	t	0	0	0	100	5	4	11:22
+28	2	50	f	10	0	0	0	14	4	46:37
+22	2	87	t	5	0	0	82	6	4	22:04
+23	2	89	f	15	2	0	0	8	4	20:20
+29	2	100	f	15	0	0	0	9	4	09:12
+30	2	95	f	0	0	0	0	3	4	13:03
 \.
 
 
@@ -7044,6 +7064,22 @@ COPY public."AvrSewerPlumberTask" (id, "time", "timeScore", "hydraulicTest", "sa
 --
 
 COPY public."AvrSewerTask" (id, "taskNumber", "time", "timeScore", "hydraulicTest", "safetyPenalty", "culturePenalty", "qualityPenalty", "stageScore", "branchId", "nominationId") FROM stdin;
+157	1	02:55	50	t	15	3	15	17	6	4
+184	2	00:44	60	t	15	0	0	45	8	4
+160	2	00:41	80	t	10	2	0	68	6	4
+165	1	04:22	50	t	0	3	30	17	3	4
+173	1	03:39	68.7	t	10	0	40	18.7	9	4
+171	2	00:58	60	f	0	2	0	0	3	4
+195	2	00:41	80	t	0	0	0	80	9	4
+161	1	06:08	50	t	10	0	40	0	5	4
+163	1	05:31	58.37	t	15	3	40	0.3699999999999974	10	4
+200	2	01:12	60	t	10	0	0	50	5	4
+164	2	01:08	62.58	t	15	2	0	45.58	10	4
+174	1	02:47	95.48	t	0	3	45	47.48	12	4
+176	1	04:20	74.43	t	5	0	20	49.43000000000001	4	4
+207	2	00:49	74.84	t	0	0	0	74.84	12	4
+178	2	01:00	67.74	f	0	0	0	0	4	4
+155	1	03:27	86.43	t	15	5	5	61.43000000000001	8	4
 \.
 
 
@@ -7072,6 +7108,23 @@ COPY public."Branch" (id, address, "participatingNominations") FROM stdin;
 --
 
 COPY public."BranchLineNumber" (id, "branchId", "practicNominationId", "lineNumber") FROM stdin;
+5	8	3	1
+6	6	3	2
+7	5	3	3
+8	10	3	4
+9	3	3	5
+10	9	3	6
+11	12	3	7
+12	4	3	8
+13	7	1	1
+14	4	1	2
+15	12	1	3
+16	5	1	4
+17	14	1	5
+18	6	1	6
+19	8	1	7
+20	9	1	8
+21	3	1	9
 \.
 
 
@@ -7080,6 +7133,16 @@ COPY public."BranchLineNumber" (id, "branchId", "practicNominationId", "lineNumb
 --
 
 COPY public."CarDriverTask" (id, "theoryCorrect", "theoryTime", "theoryPlace", "theoryPoints", "practicePenalty", "practiceTime", "practiceSum", "practicePlace", "practicePoints", "totalTheoryPoints", "totalPracticePoints", "totalPoints", "finalPlace", "userId", "branchId", "nominationId") FROM stdin;
+643	17	02:12	7	3	500	00:00	582	8	2	3	2	5	9	216	9	7
+640	20	03:22	1	12	300	00:00	406	5	5	12	5	17	1	152	5	7
+647	17	06:49	8	2	150	00:00	238	2	9	2	9	11	5	183	10	7
+645	19	01:47	4	6	550	00:00	675	9	1	6	1	7	8	259	6	7
+1205	20	04:16	3	7	160	00:00	244	3	7	7	7	14	3	248	12	7
+646	20	03:28	2	9	250	00:00	351	4	6	9	6	15	2	176	4	7
+642	19	09:00	5	5	430	00:00	495	6	4	5	4	9	6	212	3	7
+644	16	09:17	9	1	60	00:00	148	1	12	1	12	13	4	222	8	7
+649	13	11:59	10	0	550	00:00	690	10	0	0	0	0	10	235	14	7
+641	18	06:21	6	4	430	00:00	532	7	3	4	3	7	7	154	11	7
 \.
 
 
@@ -7096,6 +7159,17 @@ COPY public."Category" (id, name, "nominationId") FROM stdin;
 --
 
 COPY public."ChemLabTechnician" (id, "stage1aTime", "stage1aTimeScore", "stage1aQuality", "stage1aCulture", "stage1aSafety", "stage1aTotal", "stage1bTime", "stage1bTimeScore", "stage1bQuality", "stage1bCulture", "stage1bSafety", "stage1bTotal", "stage2Time", "stage2TimeScore", "stage2Quality", "stage2Culture", "stage2Safety", "stage2Total", "totalPoints", "finalPlace", "userId", "branchId", "nominationId") FROM stdin;
+95	11:46	25.27	0	0	0	25.27	00:00	0	0	0	0	0	00:00	0	0	0	0	0	25.27	8	158	7	2
+86	12:58	22.24	20	0	0	2.239999999999998	00:00	0	0	0	0	0	00:00	0	0	0	0	0	2.239999999999998	11	237	14	2
+102	08:10	34.39	0	0	0	34.39	00:00	0	0	0	0	0	00:00	0	0	0	0	0	34.39	5	146	5	2
+88	11:11	26.75	20	0	0	6.75	00:00	0	0	0	0	0	00:00	0	0	0	0	0	6.75	10	207	3	2
+94	09:42	30.51	0	0	0	30.51	00:00	0	0	0	0	0	00:00	0	0	0	0	0	30.51	6	157	11	2
+97	09:42	30.51	0	0	0	30.51	00:00	0	0	0	0	0	00:00	0	0	0	0	0	30.51	7	197	9	2
+96	07:15	36.71	0	0	0	36.71	00:00	0	0	0	0	0	00:00	0	0	0	0	0	36.71	3	179	10	2
+100	13:51	20	0	0	0	20	00:00	0	0	0	0	0	00:00	0	0	0	0	0	20	9	249	12	2
+98	05:57	40	0	0	0	40	00:00	0	0	0	0	0	00:00	0	0	0	0	0	40	1	219	8	2
+92	07:48	35.32	0	0	0	35.32	00:00	0	0	0	0	0	00:00	0	0	0	0	0	35.32	4	174	4	2
+99	06:07	39.58	0	0	0	39.58	00:00	0	0	0	0	0	00:00	0	0	0	0	0	39.58	2	264	6	2
 \.
 
 
@@ -7108,12 +7182,10 @@ COPY public."FullName" (id, "fullName", "branchId", "participatingNominations", 
 116	Анохин Артем Андреевич	12	{4}	244
 123	Долгов Александр Александрович	14	{1}	231
 114	Шумилов Андрей Викторович	12	{3}	250
-119	Голубев Евгений Александрович	12	{7}	248
 10	Перун Дмитрий Ильич	8	{1}	232
 125	Хусаинов Андрей Анатолиевич	14	{1,5}	226
 112	Шарков Ян Олегович	12	{3}	242
 11	Бисенгалиев Улжас Болатович	8	{1}	240
-118	Королев Николай Давыдович	12	{6}	251
 1	Шевчук Алексей Сергеевич	8	{1}	234
 9	Сергеев Андрей Петрович	8	{1}	236
 122	Телегин Юрий Николаевич	14	{1}	238
@@ -7170,6 +7242,7 @@ COPY public."FullName" (id, "fullName", "branchId", "participatingNominations", 
 95	Егорчев Алексей Викторович	10	{3}	180
 12	Троицкий Владимир Александрович	8	{1}	229
 56	Солодовников Евгений Владиславович	6	{1}	254
+119	Голубев Евгений Александрович	12	{6}	248
 67	Сохт Рамазан Рашидович	6	{6}	259
 58	Шаульский Александр Сергеевич	6	{1}	263
 60	Выходцев Глеб Алексеевич	6	{2}	258
@@ -7233,6 +7306,7 @@ COPY public."FullName" (id, "fullName", "branchId", "participatingNominations", 
 69	Родионова Анастасия Александровна	6	{8}	264
 96	Ерошкин Владимир Александрович	10	{3}	187
 2	Лапин Борис Андреевич	8	{2}	225
+118	Королев Николай Давыдович	12	{7}	251
 \.
 
 
@@ -11915,6 +11989,16 @@ COPY public."TestResult" (id, "userId", "nominationId", score, total, percentage
 --
 
 COPY public."TruckDriverTask" (id, "theoryCorrect", "theoryTime", "theoryPlace", "theoryPoints", "practicePenalty", "practiceTime", "practiceSum", "practicePlace", "practicePoints", "totalTheoryPoints", "totalPracticePoints", "totalPoints", "finalPlace", "userId", "branchId", "nominationId") FROM stdin;
+1572	18	04:03	6	4	260	02:52	432	1	12	4	12	16	2	224	8	6
+1574	19	05:60	4	6	380	03:12	572	4	6	6	6	12	5	257	6	6
+1578	16	03:30	7	3	490	03:24	694	7	3	3	3	6	7	153	11	6
+1664	20	04:52	1	12	500	02:09	629	5	5	12	5	17	1	251	12	6
+1576	19	07:16	5	5	450	01:55	565	2	9	5	9	14	4	208	3	6
+1579	12	12:59	10	0	400	04:05	645	6	4	0	4	4	8	253	10	6
+1573	19	01:52	3	7	650	02:10	780	9	1	7	1	8	6	223	9	6
+1575	16	06:57	8	2	750	03:16	946	10	0	2	0	2	10	177	4	6
+1577	15	06:41	9	1	430	04:44	714	8	2	1	2	3	9	230	14	6
+1571	20	05:16	2	9	350	03:41	571	3	7	9	7	16	3	151	5	6
 \.
 
 
@@ -12060,6 +12144,47 @@ COPY public."User" (id, number) FROM stdin;
 --
 
 COPY public."UserLineNumber" (id, "userId", "practicNominationId", "lineNumber") FROM stdin;
+19	237	8	1
+20	174	8	2
+21	157	8	3
+22	158	8	4
+23	179	8	5
+24	197	8	6
+25	219	8	7
+26	264	8	8
+27	249	8	9
+28	146	8	10
+29	207	8	11
+30	201	5	9
+31	226	5	10
+33	163	5	1
+34	214	5	2
+35	188	5	5
+36	255	5	6
+37	162	5	7
+38	148	5	8
+39	189	5	4
+40	241	5	3
+41	176	6	1
+42	216	6	2
+43	235	6	3
+44	183	6	4
+45	212	6	5
+46	222	6	6
+48	152	6	8
+49	154	6	9
+50	259	6	10
+51	253	7	1
+52	224	7	2
+53	230	7	3
+54	151	7	4
+55	257	7	5
+56	223	7	6
+57	208	7	7
+60	153	7	9
+61	177	7	10
+62	248	6	7
+63	251	7	8
 \.
 
 
@@ -12068,6 +12193,26 @@ COPY public."UserLineNumber" (id, "userId", "practicNominationId", "lineNumber")
 --
 
 COPY public."WelderTask" (id, "taskNumber", "timeScore", "culturePenalty", "safetyPenalty", "operationalControl", "visualMeasurement", "radiographicControl", "stageScore", "branchId", "nominationId", "time", "userId") FROM stdin;
+137	2	53	2	0	0	0	0	51	3	3	28:32	201
+139	2	42	0	0	0	0	0	42	14	3	34:00	226
+154	1	46	2	10	2	14	24	34	6	3	06:56	255
+166	1	43	0	0	7	14.5	17.5	43	7	3	08:29	162
+144	2	56	0	5	0	0	0	51	4	3	27:23	163
+146	2	69	0	5	0	0	0	64	12	3	20:35	214
+148	1	40	2	5	2	10	30.5	33	10	3	09:59	188
+173	1	45	0	5	2	7.5	12.5	40	8	3	07:17	241
+140	1	48	0	5	9	11.5	9.5	43	4	3	05:58	163
+136	1	40	0	0	9	12.5	19	40	14	3	10:28	226
+142	1	48	0	5	5	15	14	43	12	3	05:34	214
+161	2	72	2	0	0	0	0	70	10	3	18:55	188
+167	1	44	0	0	0	15	17	44	5	3	07:56	148
+163	2	75	2	5	0	0	0	68	6	3	17:05	255
+168	2	66	0	0	0	0	0	66	7	3	22:01	162
+170	2	69	0	0	0	0	0	69	5	3	20:57	148
+175	2	74	0	5	0	0	0	69	9	3	17:52	189
+177	2	71	0	5	0	0	0	66	8	3	19:06	241
+171	1	48	0	5	5	6	26	43	9	3	05:32	189
+135	1	44	0	0	7	19	15	44	3	3	07:51	201
 \.
 
 
@@ -12076,7 +12221,7 @@ COPY public."WelderTask" (id, "taskNumber", "timeScore", "culturePenalty", "safe
 --
 
 COPY public._prisma_migrations (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count) FROM stdin;
-7de57290-bae4-4b52-8067-c81e0d21d8fb	ec3262bb1d6259ff48563706f26e51dfe8a4dc2ab1f14ef6aa8b88832db89ba1	2025-05-30 11:14:27.270361+05	20250530061426_auth_migration	\N	\N	2025-05-30 11:14:27.215356+05	1
+7de57290-bae4-4b52-8067-c81e0d21d8fb	ec3262bb1d6259ff48563706f26e51dfe8a4dc2ab1f14ef6aa8b88832db89ba1	2025-05-30 06:14:27.270361+00	20250530061426_auth_migration	\N	\N	2025-05-30 06:14:27.215356+00	1
 \.
 
 
@@ -12098,7 +12243,7 @@ SELECT pg_catalog.setval('public."Answer_id_seq"', 6447, true);
 -- Name: AvrMechanicTask_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."AvrMechanicTask_id_seq"', 12, true);
+SELECT pg_catalog.setval('public."AvrMechanicTask_id_seq"', 30, true);
 
 
 --
@@ -12119,14 +12264,14 @@ SELECT pg_catalog.setval('public."AvrSewerPlumberTask_id_seq"', 15, true);
 -- Name: AvrSewerTask_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."AvrSewerTask_id_seq"', 154, true);
+SELECT pg_catalog.setval('public."AvrSewerTask_id_seq"', 209, true);
 
 
 --
 -- Name: BranchLineNumber_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."BranchLineNumber_id_seq"', 4, true);
+SELECT pg_catalog.setval('public."BranchLineNumber_id_seq"', 21, true);
 
 
 --
@@ -12140,7 +12285,7 @@ SELECT pg_catalog.setval('public."Branch_id_seq"', 14, true);
 -- Name: CarDriverTask_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."CarDriverTask_id_seq"', 639, true);
+SELECT pg_catalog.setval('public."CarDriverTask_id_seq"', 1549, true);
 
 
 --
@@ -12154,7 +12299,7 @@ SELECT pg_catalog.setval('public."Category_id_seq"', 1, false);
 -- Name: ChemLabTechnician_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."ChemLabTechnician_id_seq"', 85, true);
+SELECT pg_catalog.setval('public."ChemLabTechnician_id_seq"', 104, true);
 
 
 --
@@ -12210,14 +12355,14 @@ SELECT pg_catalog.setval('public."TestResult_id_seq"', 268, true);
 -- Name: TruckDriverTask_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."TruckDriverTask_id_seq"', 1570, true);
+SELECT pg_catalog.setval('public."TruckDriverTask_id_seq"', 2090, true);
 
 
 --
 -- Name: UserLineNumber_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."UserLineNumber_id_seq"', 18, true);
+SELECT pg_catalog.setval('public."UserLineNumber_id_seq"', 63, true);
 
 
 --
@@ -12231,7 +12376,7 @@ SELECT pg_catalog.setval('public."User_id_seq"', 269, true);
 -- Name: WelderTask_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."WelderTask_id_seq"', 134, true);
+SELECT pg_catalog.setval('public."WelderTask_id_seq"', 212, true);
 
 
 --
@@ -12866,4 +13011,5 @@ ALTER TABLE ONLY public."WelderTask"
 --
 -- PostgreSQL database dump complete
 --
+
 
