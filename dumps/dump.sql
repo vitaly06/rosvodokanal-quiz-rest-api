@@ -2,10 +2,8 @@
 -- PostgreSQL database dump
 --
 
-\restrict eE9MxcEfeTk6mJvY9SbRlGW6JhQyZG87lbchwuLSrye3UYs4vcBPbPEufdwU6ty
-
--- Dumped from database version 13.22
--- Dumped by pg_dump version 13.22
+-- Dumped from database version 14.18 (Ubuntu 14.18-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.18 (Ubuntu 14.18-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -454,7 +452,8 @@ CREATE TABLE public."ChemLabTechnician" (
     "finalPlace" integer,
     "userId" integer NOT NULL,
     "branchId" integer NOT NULL,
-    "nominationId" integer NOT NULL
+    "nominationId" integer NOT NULL,
+    "isBest" boolean DEFAULT false NOT NULL
 );
 
 
@@ -7194,18 +7193,18 @@ COPY public."Category" (id, name, "nominationId") FROM stdin;
 -- Data for Name: ChemLabTechnician; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public."ChemLabTechnician" (id, "stage1aTime", "stage1aTimeScore", "stage1aQuality", "stage1aCulture", "stage1aSafety", "stage1aTotal", "stage1bTime", "stage1bTimeScore", "stage1bQuality", "stage1bCulture", "stage1bSafety", "stage1bTotal", "stage2Time", "stage2TimeScore", "stage2Quality", "stage2Culture", "stage2Safety", "stage2Total", "totalPoints", "finalPlace", "userId", "branchId", "nominationId") FROM stdin;
-98	05:57	40	0	0	0	40	08:04	60	0	0	0	60	08:49	88.95	0	0	0	88.95	188.95	2	219	8	2
-88	11:11	26.75	20	0	0	6.75	15:22	48.67	0	0	0	48.67	10:18	75.1	0	0	0	75.1	130.52	10	207	3	2
-96	07:15	36.71	0	0	0	36.71	11:59	53.92	0	0	0	53.92	10:14	75.72	0	0	0	75.72	166.35	6	179	10	2
-97	09:42	30.51	0	0	0	30.51	11:23	54.85	0	0	0	54.85	08:49	88.95	0	0	0	88.95	174.31	4	197	9	2
-99	06:07	39.58	0	0	0	39.58	09:52	57.21	0	0	0	57.21	07:38	100	0	0	0	100	196.79	1	264	6	2
-94	09:42	30.51	0	0	0	30.51	13:34	51.46	0	0	0	51.46	10:31	73.07	0	0	0	73.07	155.04	8	157	11	2
-86	12:58	22.24	20	0	0	2.239999999999998	20:57	40	0	0	0	40	11:55	60	0	0	0	60	102.24	11	237	14	2
-92	07:48	35.32	0	0	0	35.32	11:58	53.95	0	0	0	53.95	10:03	77.43	0	0	0	77.43	166.7	5	174	4	2
-95	11:46	25.27	0	0	0	25.27	14:10	50.53	0	0	0	50.53	09:33	82.1	0	0	0	82.1	157.9	7	158	7	2
-102	08:10	34.39	0	0	0	34.39	08:54	58.71	0	0	0	58.71	08:17	93.93	0	0	0	93.93	187.03	3	146	5	2
-100	13:51	20	0	0	0	20	08:52	58.76	0	0	0	58.76	11:27	64.36	0	0	0	64.36	143.12	9	249	12	2
+COPY public."ChemLabTechnician" (id, "stage1aTime", "stage1aTimeScore", "stage1aQuality", "stage1aCulture", "stage1aSafety", "stage1aTotal", "stage1bTime", "stage1bTimeScore", "stage1bQuality", "stage1bCulture", "stage1bSafety", "stage1bTotal", "stage2Time", "stage2TimeScore", "stage2Quality", "stage2Culture", "stage2Safety", "stage2Total", "totalPoints", "finalPlace", "userId", "branchId", "nominationId", "isBest") FROM stdin;
+102	08:10	34.39	0	0	0	34.39	08:54	58.71	0	0	0	58.71	08:17	93.93	0	0	0	93.93	187.03	3	146	5	2	f
+98	05:57	40	0	0	0	40	08:04	60	0	0	0	60	08:49	88.95	0	0	0	88.95	188.95	2	219	8	2	f
+95	11:46	25.27	0	0	0	25.27	14:10	50.53	0	0	0	50.53	09:33	82.1	0	0	0	82.1	157.9	7	158	7	2	f
+88	11:11	26.75	20	0	0	6.75	15:22	48.67	0	0	0	48.67	10:18	75.1	0	0	0	75.1	130.52	10	207	3	2	f
+94	09:42	30.51	0	0	0	30.51	13:34	51.46	0	0	0	51.46	10:31	73.07	0	0	0	73.07	155.04	8	157	11	2	f
+99	06:07	39.58	0	0	0	39.58	09:52	57.21	0	0	0	57.21	07:38	100	0	0	0	100	196.79	1	264	6	2	f
+92	07:48	35.32	0	0	0	35.32	11:58	53.95	0	0	0	53.95	10:03	77.43	0	0	0	77.43	166.7	5	174	4	2	f
+97	09:42	30.51	0	0	0	30.51	11:23	54.85	0	0	0	54.85	08:49	88.95	0	0	0	88.95	174.31	4	197	9	2	f
+96	07:15	36.71	0	0	0	36.71	11:59	53.92	0	0	0	53.92	10:14	75.72	0	0	0	75.72	166.35	6	179	10	2	f
+100	13:51	20	0	0	0	20	08:52	58.76	0	0	0	58.76	11:27	64.36	0	0	0	64.36	143.12	9	249	12	2	f
+86	12:58	22.24	20	0	0	2.239999999999998	20:57	40	0	0	0	40	11:55	60	0	0	0	60	102.24	11	237	14	2	f
 \.
 
 
@@ -12026,15 +12025,15 @@ COPY public."TestResult" (id, "userId", "nominationId", score, total, percentage
 
 COPY public."TruckDriverTask" (id, "theoryCorrect", "theoryTime", "theoryPlace", "theoryPoints", "practicePenalty", "practiceTime", "practiceSum", "practicePlace", "practicePoints", "totalTheoryPoints", "totalPracticePoints", "totalPoints", "finalPlace", "userId", "branchId", "nominationId") FROM stdin;
 1664	20	04:52	1	12	500	02:09	629	5	5	12	5	17	1	251	12	6
-1579	12	12:59	10	0	400	04:05	645	6	4	0	4	4	8	253	10	6
-1571	20	05:16	2	9	350	03:41	571	3	7	9	7	16	3	151	5	6
-1578	16	03:30	7	3	490	03:24	694	7	3	3	3	6	7	153	11	6
 1576	19	07:16	5	5	450	01:55	565	2	9	5	9	14	4	208	3	6
 1572	18	04:03	6	4	260	02:52	432	1	12	4	12	16	2	224	8	6
-1574	19	05:60	4	6	380	03:12	572	4	6	6	6	12	5	257	6	6
+1578	16	03:30	7	3	490	03:24	694	7	3	3	3	6	7	153	11	6
 1573	19	01:52	3	7	650	02:10	780	9	1	7	1	8	6	223	9	6
-1577	15	06:41	9	1	430	04:44	714	8	2	1	2	3	9	230	14	6
+1574	19	05:60	4	6	380	03:12	572	4	6	6	6	12	5	257	6	6
+1571	20	05:16	2	9	350	03:41	571	3	7	9	7	16	3	151	5	6
+1579	12	12:59	10	0	400	04:05	645	6	4	0	4	4	8	253	10	6
 1575	16	06:57	8	2	750	03:16	946	10	0	2	0	2	10	177	4	6
+1577	15	06:41	9	1	430	04:44	714	8	2	1	2	3	9	230	14	6
 \.
 
 
@@ -12278,7 +12277,7 @@ COPY public."WelderTask" (id, "taskNumber", "timeScore", "culturePenalty", "safe
 --
 
 COPY public._prisma_migrations (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count) FROM stdin;
-7de57290-bae4-4b52-8067-c81e0d21d8fb	ec3262bb1d6259ff48563706f26e51dfe8a4dc2ab1f14ef6aa8b88832db89ba1	2025-05-30 06:14:27.270361+00	20250530061426_auth_migration	\N	\N	2025-05-30 06:14:27.215356+00	1
+7de57290-bae4-4b52-8067-c81e0d21d8fb	ec3262bb1d6259ff48563706f26e51dfe8a4dc2ab1f14ef6aa8b88832db89ba1	2025-05-30 11:14:27.270361+05	20250530061426_auth_migration	\N	\N	2025-05-30 11:14:27.215356+05	1
 \.
 
 
@@ -12412,7 +12411,7 @@ SELECT pg_catalog.setval('public."TestResult_id_seq"', 268, true);
 -- Name: TruckDriverTask_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."TruckDriverTask_id_seq"', 2230, true);
+SELECT pg_catalog.setval('public."TruckDriverTask_id_seq"', 2240, true);
 
 
 --
@@ -13068,6 +13067,4 @@ ALTER TABLE ONLY public."WelderTask"
 --
 -- PostgreSQL database dump complete
 --
-
--- \unrestrict eE9MxcEfeTk6mJvY9SbRlGW6JhQyZG87lbchwuLSrye3UYs4vcBPbPEufdwU6ty
 
