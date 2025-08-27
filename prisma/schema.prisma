@@ -394,6 +394,8 @@ model ChemLabTechnician {
   stage2Safety    Float  @default(0)
   stage2Total     Float?
 
+  isBest Boolean @default(false)
+
   // Итоговые результаты
   totalPoints Float?
   finalPlace  Int?

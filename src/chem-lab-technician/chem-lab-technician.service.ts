@@ -101,6 +101,7 @@ export class ChemLabTechnicianService {
         ...(dto.stage2Quality && { stage2Quality: dto.stage2Quality }),
         ...(dto.stage2Culture && { stage2Culture: dto.stage2Culture }),
         ...(dto.stage2Safety && { stage2Safety: dto.stage2Safety }),
+        ...(dto.isBest && { isBest: dto.isBest }),
       },
       create: {
         userId: dto.userId,
@@ -120,6 +121,8 @@ export class ChemLabTechnicianService {
         stage2Quality: dto.stage2Quality ?? 0,
         stage2Culture: dto.stage2Culture ?? 0,
         stage2Safety: dto.stage2Safety ?? 0,
+
+        isBest: dto.isBest ?? false,
       },
     });
   }
@@ -340,6 +343,8 @@ export class ChemLabTechnicianService {
           },
         });
 
+        const bonus = task.isBest ? 20 : 0;
+
         return {
           id: task?.id || null,
           practicNominationId: practicNomination.id,
@@ -380,7 +385,7 @@ export class ChemLabTechnicianService {
             },
           ],
           theoryScore: theoryScore.toFixed(2),
-          practiceScore: (task?.totalPoints || 0).toFixed(2),
+          practiceScore: ((task?.totalPoints || 0) + bonus).toFixed(2),
           total: (theoryScore + (task?.totalPoints || 0)).toFixed(2),
           // place: task?.finalPlace || null,
         };

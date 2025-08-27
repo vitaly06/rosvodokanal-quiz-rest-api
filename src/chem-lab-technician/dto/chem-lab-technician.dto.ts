@@ -1,6 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, IsString, Matches, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Matches,
+  Min,
+} from 'class-validator';
 
 export class UpdateChemLabTechnicianDto {
   @ApiProperty()
@@ -81,4 +88,7 @@ export class UpdateChemLabTechnicianDto {
   @Min(0)
   @IsOptional()
   stage2Safety?: number;
+
+  @IsBoolean()
+  isBest?: boolean;
 }
